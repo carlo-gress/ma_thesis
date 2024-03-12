@@ -1,0 +1,298 @@
+---
+title: "master thesis"
+author: "Carlo Greß"
+date: "2024-03-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(sf)
+library(sp)
+library(ggplot2)
+library(plotly)
+library(leaflet)
+library(mapview)
+library(tmap)
+```
+
+# Loading required geodata files 
+
+## Germany (Constituencies)
+
+```{r}
+# Load the shapefile
+shapefile_path <- "Data sources/btw21_geometrie_wahlkreise_vg250_geo_shp/Geometrie_Wahlkreise_20DBT_VG250_geo.shp"
+wahlkreise_germany <- st_read(shapefile_path)
+
+# Assuming UTM Zone 32N as the projected CRS for Germany
+utm_crs <- "EPSG:32632"
+wahlkreise_germany <- st_transform(wahlkreise_germany, crs = utm_crs)
+utm_crs_germany <- st_crs(wahlkreise_germany)
+
+# Plot the shapefile on a map without labels and the coordinate system
+g <- ggplot() +
+  geom_sf(data = wahlkreise_germany, fill = "white", color = "black") +
+  labs(title = "German Wahlkreise", x = NULL, y = NULL) + # Remove axis titles
+  theme_void() + # This removes background, gridlines, and text
+  theme(plot.title = element_text(hjust = 0.5)) # Center the title
+
+ggsave("wahlkreise_germany_map_large.png", plot = g, width = 16, height = 12, dpi = 300)
+```
+
+## Berlin (Electoral district borders for state elections, "Abgeordnetenhauswahl")
+
+```{r}
+shapefile_path_ah_wk <- "Data sources/RBS_OD_Wahlkreise_AH2021/AWK_AH21_25833.shp"
+ah_wk <- st_read(shapefile_path_ah_wk)
+
+# Ensure the second shapefile has the same CRS as the first
+if (!st_crs(ah_wk) == utm_crs_germany) {
+  ah_wk <- st_transform(ah_wk, utm_crs_germany)
+}
+
+# Plotting 
+ggplot() +
+  geom_sf(data = ah_wk, fill = "lightgray", color = "black") +
+  theme_void() + # Removes background, gridlines, and text
+  theme(plot.margin = margin(0, 0, 0, 0, "cm")) # Optional: Remove margins around the plot
+
+# Saving
+ggsave("ah_wk_map_large.png", width = 15, height = 10, dpi = 300)
+```
+### RBS-Blocks (most granular spatial level of Berlin geometry)
+
+```{r}
+bloecke_path <- "Data sources/rbs_bloecke_wfs/rbs_bloecke_wfs.shp"
+bloecke <- st_read(bloecke_path)
+bloecke <- st_transform(bloecke, utm_crs_germany)
+
+# Plotting Blockflächen with specified aesthetics
+ggplot() +
+  geom_sf(data = bloecke, fill = "lightgray", color = "black") +
+  theme_void() + # Removes background, gridlines, and text
+  theme(plot.margin = margin(0, 0, 0, 0, "cm")) + # Optional: Remove margins around the plot
+  ggtitle("Blockflächen") + # Adds a title
+  theme(plot.title = element_text(hjust = 0.5)) # Center the title
+
+# To display the plot in an R environment (like RStudio), just run the code above.
+# If you need to save the plot to a file, you can use ggsave with specified dimensions for a larger figure.
+ggsave("bloecke_map_large.png", width = 15, height = 10, dpi = 300)
+```
+# Reading in data that has been spatially in joined in QGIS
+
+### RBS blocks with consituency meta information
+
+```{r}
+shapefile_path <- "Data sources/qgis spatial join/secondtry.shp"
+rbs_ah_bt <- st_read(shapefile_path)
+rbs_ah_bt <- st_transform(rbs_ah_bt, utm_crs_germany)
+
+# Plotting the shapefile
+ggplot() +
+  geom_sf(data = rbs_ah_bt, fill = "lightgray", color = "black") +
+  theme_void() +
+  theme(plot.margin = margin(0, 0, 0, 0, "cm"))
+
+ggsave("rbs_ah_bt_map.png", width = 15, height = 10, dpi = 300)
+
+rbs_ah_bt_df <- as.data.frame(rbs_ah_bt)
+write.csv(rbs_ah_bt_df, "rbs_ah_bt.csv", row.names = FALSE)
+```
+Since the RBS and the constituency borders are not perfectly aligned, some few blocks (26 out of the 15940 blocks) have been mistakenly assigned to the wrong constituencies. The next code chunk manually corrects the flawed values. 
+
+```{r}
+berlin_final <- rbs_ah_bt_df |> 
+  mutate(
+    WKR_NR = case_when(
+      LAND_NAME != "Berlin" & WKR_NR == 58 ~ 77,
+      LAND_NAME != "Berlin" & WKR_NR == 59 ~ 85,
+      LAND_NAME != "Berlin" & WKR_NR == 61 ~ 79,
+      LAND_NAME != "Berlin" & WKR_NR == 62 ~ 84,
+      LAND_NAME != "Berlin" & WKR_NR == 63 ~ 84,
+      TRUE ~ WKR_NR
+    ),
+    WKR_NAME = case_when(
+      LAND_NAME != "Berlin" & WKR_NR == 77 ~ "Berlin_Reinickendorf",
+      LAND_NAME != "Berlin" & WKR_NR == 85 ~ "Berlin_Marzahn_Hellersdorf",
+      LAND_NAME != "Berlin" & WKR_NR == 79 ~ "Berlin_Steglitz_Zehlendorf",
+      LAND_NAME != "Berlin" & WKR_NR == 84 & WKR_NAME != "Berlin_Treptow_Köpenick" ~ "Berlin_Treptow_Köpenick",
+      TRUE ~ WKR_NAME
+    ),
+    LAND_NAME = ifelse(LAND_NAME != "Berlin", "Berlin", LAND_NAME),
+    LAND_NR = ifelse(LAND_NAME == "Berlin", as.numeric(11), LAND_NR)
+  )
+
+berlin_final <- berlin_final |> 
+  mutate( 
+    WKR_NR = case_when(blknr == 171601 ~ 76,
+    TRUE ~ WKR_NR),
+    WKR_NAME = case_when(blknr == 171601  ~ "Berlin-Pankow",
+    TRUE ~ WKR_NAME)
+    )
+```
+
+Visualising the final RBS blocks, coloring based on whether the block is occupied or not
+
+```{r}
+# Transforming the dataframe into an sf object for plotting 
+berlin_final_sf <- st_as_sf(berlin_final, crs = utm_crs_germany)
+
+# Plot the map using ggplot2
+ggplot() +
+  geom_sf(data = filter(berlin_final_sf, ewk != "unbewohnt"), aes(fill = "Occupied"), size = 0.5, alpha = 0.5) +
+  geom_sf(data = filter(berlin_final_sf, ewk == "unbewohnt"), aes(fill = "Unoccupied"), size = 0.5, alpha = 0.5) +
+  scale_fill_manual(values = c("Unoccupied" = "red", "Occupied" = "blue")) +
+  theme_void() + # Remove axes
+  theme(legend.position = "right", legend.title = element_blank(), legend.text = element_text(size = 10))
+
+# If needed, save the plot to a file
+ggsave("final_figures/berlin_blocks_map.png", width = 15, height = 15, dpi = 300)
+
+```
+
+# Demographic data
+
+## Germany 
+
+```{r}
+
+csv_file_path <- "Data sources/bundestagswahlkreise/btw21_strukturdaten.csv"
+
+# Define the locale with German notation
+german_locale <- locale(decimal_mark = ",", grouping_mark = ".")
+
+# Load the CSV file
+btw_21 <- read_delim(csv_file_path, delim = ';', skip = 8, col_names = TRUE, locale = german_locale)
+
+# Keep demographic variables only 
+btw_21 <- btw_21 |> 
+  select(1:17)
+
+# Rename the columns
+btw_21 <- btw_21 |> 
+  rename(
+    Country = `Land`,
+    DistrictNo = `Wahlkreis-Nr.`,
+    DistrictName = `Wahlkreis-Name`,
+    Municipalities = `Gemeinden am 31.12.2019 (Anzahl)`,
+    Area = `Fläche am 31.12.2019 (km²)`,
+    TotalPopulation = `Bevölkerung am 31.12.2019 - Insgesamt (in 1000)`,
+    GermanPopulation = `Bevölkerung am 31.12.2019 - Deutsche (in 1000)`,
+    ForeignersPercentage = `Bevölkerung am 31.12.2019 - Ausländer/-innen (%)`,
+    PopulationDensity = `Bevölkerungsdichte am 31.12.2019 (EW je km²)`,
+    BirthRate = `Zu- (+) bzw. Abnahme (-) der Bevölkerung 2019 - Geburtensaldo (je 1000 EW)`,
+    MigrationRate = `Zu- (+) bzw. Abnahme (-) der Bevölkerung 2019 - Wanderungssaldo (je 1000 EW)`,
+    Age_Under18 = `Alter von ... bis ... Jahren am 31.12.2019 - unter 18 (%)`,
+    Age_18_24 = `Alter von ... bis ... Jahren am 31.12.2019 - 18-24 (%)`,
+    Age_25_34 = `Alter von ... bis ... Jahren am 31.12.2019 - 25-34 (%)`,
+    Age_35_59 = `Alter von ... bis ... Jahren am 31.12.2019 - 35-59 (%)`,
+    Age_60_74 = `Alter von ... bis ... Jahren am 31.12.2019 - 60-74 (%)`,
+    Age_75plus = `Alter von ... bis ... Jahren am 31.12.2019 - 75 und mehr (%)`
+  )
+
+# Adjust 'Area', 'TotalPopulation', and 'GermanPopulation' by multiplying by 1000 (original data was measured in thousands)
+btw_21 <- btw_21 |> 
+  mutate(Area = Area * 1000,
+         TotalPopulation = TotalPopulation * 1000,
+         GermanPopulation = GermanPopulation * 1000) |> 
+  # Filter rows where 'DistrictNo' is less than or equal to 299. This effectively means to only consider the real constituency rows, not any cumulative measures
+  filter(DistrictNo <= 299)
+```
+
+```{r}
+# Calculate average values
+average_total_population <- mean(btw_21$TotalPopulation, na.rm = TRUE)
+average_german_population <- mean(btw_21$GermanPopulation, na.rm = TRUE)
+average_foreigners_percentage <- mean(btw_21$ForeignersPercentage, na.rm = TRUE)
+
+# Print the results
+cat("Average Total Population:", sprintf("%.2f", average_total_population), "\n")
+cat("Average German Population:", sprintf("%.2f", average_german_population), "\n")
+cat("Average Foreigners Percentage:", sprintf("%.2f", average_foreigners_percentage), "\n")
+```
+
+Creating a new variable that indicates the deviation of the German population from the average German population as a share. Additionally, we add the gemometry of the constituencies in order to be able to plot the later results. For that purpose, we cann use the `wahlkreise_germany` object
+
+```{r}
+btw_21 <- btw_21 |> 
+  mutate(deviation = (GermanPopulation - average_german_population) / average_german_population * 100)
+
+# Merge btw_21 with wahlkreise_germany
+
+# Adjust btw_21 by removing leading zeros from DistrictNo
+btw_21 <- btw_21 %>%
+  mutate(DistrictNo = as.numeric(as.character(DistrictNo)))
+
+btw_21 <- btw_21 %>%
+  left_join(wahlkreise_germany %>% select(WKR_NR, geometry), by = c("DistrictNo" = "WKR_NR"))
+
+btw_21_sf <- st_as_sf(btw_21, crs = st_crs(utm_crs_germany))
+```
+
+Next, we will create a plot that shows how much the constituencies deviate from the average population number 
+
+```{r}
+ggplot(data = btw_21_sf) +
+  geom_sf(aes(fill = deviation), color = "0.8", size = 0.8) +
+  scale_fill_distiller(palette = "RdBu", name = "Deviation (in %)", limits = c(min(btw_21_sf$deviation, na.rm = TRUE), max(btw_21_sf$deviation, na.rm = TRUE))) +
+  theme_void() +
+  theme(plot.title = element_text(size = 16),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12)) +
+  theme(legend.position = "right")
+
+# Display the plot
+ggsave("population_deviation_map.png", width = 12, height = 8, dpi = 300)
+```
+Now, I am creating a similar plot that only shows the constituencies that have a deviation of below -15 %or above 15 %. These constituencies should, when possible, be redistricted. 
+```{r}
+btw_21_sf <- btw_21_sf |> 
+  mutate(deviation15 = ifelse(deviation < -15 | deviation > 15, 1, 0))
+
+# Plot all constituencies, coloring by deviation value or grey if not significant
+ggplot(data = btw_21_sf) +
+  geom_sf(data = btw_21_sf %>% filter(deviation15 == 0), fill = "grey", color = NA, size = 0.1) +
+  geom_sf(data = btw_21_sf %>% filter(deviation15 == 1), aes(fill = deviation), color = NA, size = 0.1) +
+  scale_fill_distiller(palette = "RdBu", name = "Deviation (in per cent)", 
+                       limits = c(min(btw_21_sf$deviation, na.rm = TRUE), max(btw_21_sf$deviation, na.rm = TRUE))) +
+  theme_void() +
+  theme(plot.title = element_text(size = 16),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        legend.position = "right")
+
+ggsave("final_figures/deviation15.png", width = 12, height = 8, dpi = 300)
+```
+Let's briefly check the minimum and maximum values of deviation. If a consituency falls below -25 or above 25 per cent deviation, it needs to be redistricted (mandatory). 
+
+```{r}
+cat("District with min. deviation:", btw_21_sf$DistrictName[which.min(btw_21_sf$deviation)], sprintf("(%.2f)", min(btw_21_sf$deviation)), "\n")
+cat("District with max. deviation:", btw_21_sf$DistrictName[which.max(btw_21_sf$deviation)], sprintf("(%.2f)", max(btw_21_sf$deviation)), "\n")
+
+```
+
+Next, we are creating a plot that shows the foreigner's percentage per constituency. Additionally, we'll highlight the constituencies with the min/max value.
+
+```{r}
+highlighted_constituencies <- highlighted_constituencies |>
+  mutate(centroid = st_centroid(geometry))
+
+# Now, use the calculated centroids for x and y in geom_text
+ggplot(data = btw_21_sf) +
+  geom_sf(aes(fill = ForeignersPercentage), color = NA) +
+  scale_fill_viridis_c(option = "plasma", name = "Foreigners Percentage") +
+  geom_sf(data = highlighted_constituencies, color = "black", size = 0.5, show.legend = FALSE) +
+  geom_text(data = highlighted_constituencies, aes(x = st_coordinates(centroid)[,1], y = st_coordinates(centroid)[,2], label = paste0(DistrictName, "\n", sprintf("%.2f%%", ForeignersPercentage))), size = 3, color = "black") +
+  theme_void() +
+  theme(plot.title = element_text(size = 14),
+        plot.subtitle = element_text(size = 10),
+        legend.position = "right")
+
+ggsave("final_figures/foreigners_percentage_annotated.png", width = 12, height = 8, dpi = 300)
+```
+
