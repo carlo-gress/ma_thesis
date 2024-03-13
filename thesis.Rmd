@@ -18,6 +18,7 @@ library(plotly)
 library(leaflet)
 library(mapview)
 library(tmap)
+library(gridExtra)
 ```
 
 # Loading required geodata files 
@@ -495,7 +496,6 @@ ggplot(data = berlin_final) +
 Since this figure is hard to read because blocks are small, let's create a faceted plot (one for each constituency):
 
 ```{r}
-library(gridExtra)
 
 # Function to create plot for each WKR_NAME
 plot_district <- function(data, district_name) {
