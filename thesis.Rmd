@@ -117,10 +117,10 @@ berlin_final <- rbs_ah_bt_df |>
       TRUE ~ WKR_NR
     ),
     WKR_NAME = case_when(
-      LAND_NAME != "Berlin" & WKR_NR == 77 ~ "Berlin_Reinickendorf",
-      LAND_NAME != "Berlin" & WKR_NR == 85 ~ "Berlin_Marzahn_Hellersdorf",
-      LAND_NAME != "Berlin" & WKR_NR == 79 ~ "Berlin_Steglitz_Zehlendorf",
-      LAND_NAME != "Berlin" & WKR_NR == 84 & WKR_NAME != "Berlin_Treptow_Köpenick" ~ "Berlin_Treptow_Köpenick",
+      LAND_NAME != "Berlin" & WKR_NR == 77 ~ "Berlin-Reinickendorf",
+      LAND_NAME != "Berlin" & WKR_NR == 85 ~ "Berlin-Marzahn-Hellersdorf",
+      LAND_NAME != "Berlin" & WKR_NR == 79 ~ "Berlin-Steglitz-Zehlendorf",
+      LAND_NAME != "Berlin" & WKR_NR == 84 & WKR_NAME != "Berlin-Treptow-Köpenick" ~ "Berlin-Treptow-Köpenick",
       TRUE ~ WKR_NAME
     ),
     LAND_NAME = ifelse(LAND_NAME != "Berlin", "Berlin", LAND_NAME),
@@ -268,9 +268,13 @@ ggplot(data = btw_21_sf) +
 
 ggsave("final_figures/deviation15.png", width = 12, height = 8, dpi = 300)
 ```
-Let's briefly check the minimum and maximum values of deviation. If a consituency falls below -25 or above 25 per cent deviation, it needs to be redistricted (mandatory). 
+Let's briefly check the minimum and maximum values of deviation as well as the number of consituencies with such a deviation. If a consituency falls below -25 or above 25 per cent deviation, it needs to be redistricted (mandatory). 
 
 ```{r}
+btw_21_sf |> 
+  filter(deviation15 == 1) |> 
+  length()
+
 cat("District with min. deviation:", btw_21_sf$DistrictName[which.min(btw_21_sf$deviation)], sprintf("(%.2f)", min(btw_21_sf$deviation)), "\n")
 cat("District with max. deviation:", btw_21_sf$DistrictName[which.max(btw_21_sf$deviation)], sprintf("(%.2f)", max(btw_21_sf$deviation)), "\n")
 
@@ -286,13 +290,243 @@ highlighted_constituencies <- highlighted_constituencies |>
 ggplot(data = btw_21_sf) +
   geom_sf(aes(fill = ForeignersPercentage), color = NA) +
   scale_fill_viridis_c(option = "plasma", name = "Foreigners Percentage") +
-  geom_sf(data = highlighted_constituencies, color = "black", size = 0.5, show.legend = FALSE) +
-  geom_text(data = highlighted_constituencies, aes(x = st_coordinates(centroid)[,1], y = st_coordinates(centroid)[,2], label = paste0(DistrictName, "\n", sprintf("%.2f%%", ForeignersPercentage))), size = 3, color = "black") +
+  #geom_sf(data = highlighted_constituencies, color = "black", size = 0.5, show.legend = FALSE) +
+ # geom_text(data = highlighted_constituencies, aes(x = st_coordinates(centroid)[,1], y = st_coordinates(centroid)[,2], label = paste0(DistrictName, "\n", sprintf("%.2f%%", ForeignersPercentage))), size = 3, color = "black") +
   theme_void() +
   theme(plot.title = element_text(size = 14),
         plot.subtitle = element_text(size = 10),
         legend.position = "right")
 
 ggsave("final_figures/foreigners_percentage_annotated.png", width = 12, height = 8, dpi = 300)
+```
+
+Avg. population sizes of consituencies with and without foreigners as well as constituencies per state. 
+
+```{r}
+average_german_population_per_row <- round(mean(btw_21$GermanPopulation, na.rm = TRUE))
+
+# Calculate the average Total Population
+average_total_population <- round(mean(btw_21$TotalPopulation, na.rm = TRUE))
+
+# Calculate the current number of constituencies per state
+constituencies_per_state <- btw_21 %>%
+  group_by(Country) %>%
+  summarise(NumberOfConstituencies = n())
+
+# Print the results
+cat("Average German Population:", sprintf("%.2f", average_german_population_per_row), "\n")
+cat("Average Total Population:", sprintf("%.2f", average_total_population), "\n")
+cat("Current number of constituencies per state:\n")
+print(constituencies_per_state)
+
+# As we can see from the output, considering foreigners increases the average population size per constituency by almost 35,000 inhabitants, from 243,373 to 278,148.Furthermore, we can derive that Nordrhein-Westfalen has the highest number of electoral districts (64), while Bremen only has 2. 
+```
+
+Next, we want to calculate, how many constituencies each state should receive when foreigner considered. In the last chunk, we already calculated the avg. population size including foreigners. 
+
+```{r}
+divisor <- mean(btw_21$TotalPopulation, na.rm = TRUE)
+
+# Sum total population per country (Bundesland)
+total_population_per_country <- btw_21 %>%
+  group_by(Country) %>%
+  summarise(TotalPopulation = sum(TotalPopulation, na.rm = TRUE)) %>%
+  ungroup()
+
+# Divide the total population of each Bundesland by the average population per constituency
+total_population_per_country <- total_population_per_country %>%
+  mutate(DividedPopulation = round(TotalPopulation / divisor))
+
+# Print the resulting divided population per country
+print(total_population_per_country)
+
+# Calculate and print the sum of the rounded electoral districts
+total_electoral_districts <- sum(total_population_per_country$DividedPopulation)
+cat("Total number of electoral districts:", total_electoral_districts, "\n")
+```
+
+We can see from the output, that several states would receive extra constituencies, while others loose constituencies. However, the total number of constituencies is 301. Since the number of electoral districts is legally fixed (299), we need to apply an algorithm that guarantees a fixed number of electoral districts.
+
+German policy makers for this purpose use the Sainte-Lague algorithm. In the first step, this algorithm does the same calculation as the previous cell. It then checks whether the calculated number of electoral districts is equal to the fixed 299. If true, the algorithms terminates, if false, the divisor is increased or decreased until the target number is reached. The next chunk applies this algorithm while including foreigners in the avg. constituency size (the divisor).
+
+```{r}
+total_population_sum <- sum(btw_21$TotalPopulation, na.rm = TRUE)
+initial_divisor <- total_population_sum / 299
+
+# Initialize variables
+divisor <- initial_divisor
+total_districts <- 0
+
+# Set a maximum number of iterations to avoid an infinite loop
+max_iterations <- 1000
+iterations <- 0
+
+# Iterate until the total number of districts is 299 or the maximum number of iterations is reached
+while (total_districts != 299 && iterations < max_iterations) {
+  # Calculate the preliminary number of districts per country
+  preliminary_districts_per_country <- btw_21 %>%
+    group_by(Country) %>%
+    summarise(TotalPopulation = sum(TotalPopulation, na.rm = TRUE), .groups = 'drop') %>%
+    mutate(PreliminaryDistricts = round(TotalPopulation / divisor))
+  
+  # Update the total number of districts
+  total_districts <- sum(preliminary_districts_per_country$PreliminaryDistricts)
+  
+  # Adjust the divisor
+  if (total_districts < 299) {
+    divisor <- divisor * (1 - (299 - total_districts) / 5000)
+  } else if (total_districts > 299) {
+    divisor <- divisor * (1 + (total_districts - 299) / 5000)
+  }
+  
+  # Increment iteration counter
+  iterations <- iterations + 1
+  
+  # Optional: Print intermediate results to monitor progress
+  cat(sprintf("Iteration %d: Total Districts = %d, Divisor = %.2f\n", iterations, total_districts, divisor))
+}
+
+# Print the final divisor and total electoral districts to check target achievement
+cat("Final iteration count:", iterations, "\n")
+cat("Final Divisor:", divisor, "\n")
+cat("Total Electoral Districts:", total_districts, "\n")
+
+# Display the final distribution of districts per country
+print(preliminary_districts_per_country)
+```
+We can see from the output, that the algorithm worked and we receive 299 constituencies in total, distributed accordingly to the total population size. We can also see, that there have been some shifts between states. Let's create a table that indiactes the old and ew distribution of constituencies and also shows the change. 
+
+```{r}
+result_df <- constituencies_per_state |> 
+  left_join(preliminary_districts_per_country, by = "Country") |>
+  mutate(Delta = PreliminaryDistricts - NumberOfConstituencies) |> 
+  rename(CurrentNo = NumberOfConstituencies, UpdatedNo = PreliminaryDistricts) |>
+  select(Country, CurrentNo, UpdatedNo, Delta)
+
+sum_current_constituencies <- sum(result_df$CurrentNo, na.rm = TRUE)
+sum_new_constituencies <- sum(result_df$UpdatedNo, na.rm = TRUE)
+sum_delta <- sum(result_df$Delta, na.rm = TRUE)
+
+# Add a summary row with the sums
+result_df_summary <- result_df %>%
+  add_row(Country = "Total", 
+          CurrentNo = sum_current_constituencies, 
+          UpdatedNo = sum_new_constituencies, 
+          Delta = sum_delta)
+
+# Print the updated dataframe with the summary row
+print(result_df_summary)
+```
+
+## Berlin demographics
+
+Next, we have detailled demographic data on the RBS-block level for Berlin. This data originally came as one csv file per constituency. Each csv file is then again separated into several sheets, one for each city district. Let's read in the data. 
+
+```{r}
+library(readxl)
+library(purrr)
+library(dplyr)
+library(stringr)
+
+# Directory path
+directory_path <- '/Users/carlogress/Documents/GitHub/ma_thesis/Data sources/Blockdaten/'
+
+# Define new column names in lowercase and underscores
+new_columns <- c('district', 'block', 'total', 'age_below_6', 'age_6_15', 'age_15_18', 'age_18_27', 'age_27_45',
+                 'age_45_55', 'age_55_65', 'age_over_65', 'migrant_background', 'foreigners', 'men')
+
+# Get a list of all XLSX files in the directory that match the specific pattern
+xlsx_files <- fs::dir_ls(path = directory_path) %>%
+  str_subset("WBL-Bez\\d+-2023-06-30\\.xlsx")
+
+# Read each file and each sheet, then concatenate into a single DataFrame
+combined_df <- map_df(xlsx_files, function(file_path) {
+  sheet_names <- excel_sheets(file_path)
+  
+  map_df(sheet_names, function(sheet) {
+    read_excel(file_path, sheet = sheet, skip = 5, col_names = FALSE) %>%
+      set_names(new_columns) %>%
+      slice(-1) 
+  }, .id = "sheet_name")
+}, .id = "file_path") |> 
+  filter(!is.na(block))
+
+# Display the combined DataFrame
+print(head(combined_df))
+
+write.csv(combined_df, "Data Sources/Blockdaten/rbs_blocks_demographic.csv", row.names = FALSE)
+```
+
+The dataframe now contains the demographic information of all occupied blocks in Berlin. We can now add this demographic information to our `berlin_final` dataframe that includes the also needed spatial variables. We can achieve this by merging the two dataframes based on the block number as matching key.
+
+```{r}
+berlin_final <- berlin_final |> 
+  left_join(combined_df, by = c("blknr" = "block"))
+```
+
+Let's also add a column that indiactes the share of foreigners per block: 
+
+```{r}
+berlin_final <- berlin_final |> 
+  mutate(foreigners_share = foreigners / total)
+```
+
+As a test, we can also calculate the share of foreigners in each Berlin constituency: 
+
+```{r}
+berlin_final |> 
+  group_by(WKR_NAME) |> 
+  summarise(average_share = mean(foreigners / total, na.rm = TRUE)) |> 
+  mutate(average_share = round(average_share, 2))
+```
+Comparing the values to the ForeignersPercentage column in the `btw21` dataframe, we can notice slight differences. These are due to recent shifts that become visible since the data come from different points in time (btw21 data from 2021, RBS block data from 2023).
+
+```{r}
+berlin_final <- st_as_sf(berlin_final, crs = utm_crs_germany)
+
+ggplot(data = berlin_final) +
+  geom_sf(aes(fill = foreigners_share), color = NA, na.value = "grey") +
+  scale_fill_viridis_c(option = "plasma", name = "Foreigners Share", na.value = "grey", 
+                       limits = c(NA, NA), oob = scales::squish) +
+  theme_void() +
+  theme(legend.position = "right")
+```
+
+Since this figure is hard to read because blocks are small, let's create a faceted plot (one for each constituency):
+
+```{r}
+library(gridExtra)
+
+# Function to create plot for each WKR_NAME
+plot_district <- function(data, district_name) {
+  data %>%
+    filter(WKR_NAME == district_name) %>%
+    ggplot() +
+    geom_sf(aes(fill = foreigners_share), color = NA, na.value = "grey") +
+    scale_fill_viridis_c(name = "Foreigners Share", na.value = "grey", limits = c(NA, NA), oob = scales::squish) +
+    labs(title = district_name) +
+    theme_void() +
+    theme(plot.title = element_text(hjust = 0.5, size = 10), legend.position = "none")
+}
+
+# Apply the function to each district
+district_names <- unique(berlin_final$WKR_NAME)
+plots <- lapply(district_names, function(name) plot_district(berlin_final, name))
+
+# Combine the plots
+combined_plot <- do.call(grid.arrange, c(plots, ncol = 2))
+
+ggsave("berlin_districts_combined_plot.png", combined_plot, width = 40, height = 60, units = "cm")
+```
+
+Now we can also retrieve, whether considering foreigner while lead to some Berlin constituencies being too large or too small (based on the 25 per cen deviation rule). Earlier, we calculated the divisor (the average population size of constituencies when foreigners are included). We can now use this object to retrieve the deviation of the population sizes of the Berlin constituencies:
+```{r}
+sums_by_wkr <- aggregate(total ~ WKR_NAME, data = berlin_final, FUN = sum)
+
+
+sums_by_wkr$deviation_share <- (sums_by_wkr$total - divisor) / divisor
+
+# View the dataframe with the new column
+print(sums_by_wkr)
 ```
 
