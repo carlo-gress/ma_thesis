@@ -486,8 +486,8 @@ Comparing the values to the ForeignersPercentage column in the `btw21` dataframe
 berlin_final <- st_as_sf(berlin_final, crs = utm_crs_germany)
 
 ggplot(data = berlin_final) +
-  geom_sf(aes(fill = foreigners_share), color = NA, na.value = "grey") +
-  scale_fill_viridis_c(option = "plasma", name = "Foreigners Share", na.value = "grey", 
+  geom_sf(aes(fill = foreigners_share), color = NA, na.value = "lightgrey") +
+  scale_fill_viridis_c(option = "C", name = "Foreigners Share", na.value = "lightgrey", 
                        limits = c(NA, NA), oob = scales::squish) +
   theme_void() +
   theme(legend.position = "right")
@@ -528,5 +528,41 @@ sums_by_wkr$deviation_share <- (sums_by_wkr$total - divisor) / divisor
 
 # View the dataframe with the new column
 print(sums_by_wkr)
+```
+Let's compare the population and deviation values with the currently used values where foreigners are not considered: 
+```{r}
+avg_population_per_district <- mean(btw_21$GermanPopulation, na.rm = TRUE)
+
+sums_by_wkr_prepared <- sums_by_wkr %>%
+  rename(WKR_NAME = WKR_NAME,
+         population_new = total,
+         deviation_new = deviation_share) %>%
+  mutate(deviation_new = round(deviation_new, 2))  
+
+btw21_prepared <- btw_21 %>%
+  mutate(deviation_old = (GermanPopulation - avg_population_per_district) / avg_population_per_district,
+         deviation_old = round(deviation_old, 2)) %>%  
+  rename(DistrictName = DistrictName,
+         population_old = GermanPopulation)
+
+combined_table <- sums_by_wkr_prepared %>%
+  left_join(btw21_prepared, by = c("WKR_NAME" = "DistrictName"))
+
+final_table <- combined_table %>%
+  select(WKR_NAME, population_new, deviation_new, population_old, deviation_old) |> 
+  arrange(desc(deviation_new))
+
+print(final_table)
+```
+
+
+# Redistricting simulation
+
+As we saw in the previous calculation, considering foreigners in the Berlin constituencies leads to significant deviations from the average population size. Concretely, two districts *should* - if possible - redistricted since their deviation from the average exceeds 15 per cent (Neukölln: + 18 %; Pankow: + 24 %). More importantly, there are now three districts where redistricting would be *mandatory* due to a deviation of more than 25 per cent: Tempelhof-Schöneberg (+ 27 %), Friedrichshain-Kreuzberg-Prenzlauer Berg Ost (+ 33 %) and Mitte (+ 42 %). Additionally, we calculated earlier how many constituencies each German state should receive, showing that Berlin would receive a new, thirteenth district. Hence, the next task is to propose a redistricting simulation that introduces a new district that similarly resolves the problem of the three overpopulated districts. 
+
+We are using the `redist` library in order to propose a redistricting scheme.
+
+```{r}
+
 ```
 
