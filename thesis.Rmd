@@ -13,7 +13,6 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(sf)
 library(sp)
-library(ggplot2)
 library(plotly)
 library(leaflet)
 library(mapview)
@@ -424,10 +423,7 @@ print(result_df_summary)
 Next, we have detailled demographic data on the RBS-block level for Berlin. This data originally came as one csv file per constituency. Each csv file is then again separated into several sheets, one for each city district. Let's read in the data. 
 
 ```{r}
-library(readxl)
-library(purrr)
-library(dplyr)
-library(stringr)
+
 
 # Directory path
 directory_path <- '/Users/carlogress/Documents/GitHub/ma_thesis/Data sources/Blockdaten/'
@@ -558,11 +554,139 @@ print(final_table)
 
 # Redistricting simulation
 
-As we saw in the previous calculation, considering foreigners in the Berlin constituencies leads to significant deviations from the average population size. Concretely, two districts *should* - if possible - redistricted since their deviation from the average exceeds 15 per cent (Neukölln: + 18 %; Pankow: + 24 %). More importantly, there are now three districts where redistricting would be *mandatory* due to a deviation of more than 25 per cent: Tempelhof-Schöneberg (+ 27 %), Friedrichshain-Kreuzberg-Prenzlauer Berg Ost (+ 33 %) and Mitte (+ 42 %). Additionally, we calculated earlier how many constituencies each German state should receive, showing that Berlin would receive a new, thirteenth district. Hence, the next task is to propose a redistricting simulation that introduces a new district that similarly resolves the problem of the three overpopulated districts. 
+As we saw in the previous calculation, considering foreigners in the Berlin constituencies leads to significant deviations from the average population size. Concretely, two districts *should* - if possible - redistricted since their deviation from the average exceeds 15 per cent (Neukölln: + 18 %; Pankow: + 24 %). More importantly, there are now three districts where redistricting would be *mandatory* due to a deviation of more than 25 per cent: Tempelhof-Schöneberg (+ 27 %), Friedrichshain-Kreuzberg-Prenzlauer Berg Ost (+ 33 %) and Mitte (+ 42 %). Additionally, we calculated earlier how many constituencies each German state should receive, showing that Berlin would receive a new, thirteenth district. Hence, the next task is to propose a redistricting simulation that (a) introduces a new district  and (b) similarly resolves the problem of the three overpopulated districts. 
 
 We are using the `redist` library in order to propose a redistricting scheme.
 
 ```{r}
+awk_to_wkr <- berlin_final %>%
+  group_by(AWK, WKR_NR) %>%
+  summarise(WKR_NAME = first(WKR_NAME), .groups = 'drop')
 
+print(awk_to_wkr)
+```
+```{r}
+
+# Two (unoccupied) blocks have been assigned to the wrong AWK during the spatial join. Manually correcting it now: 
+
+berlin_final <- berlin_final |> 
+  mutate(
+    WKR_NR = case_when(
+      blknr == 106900 ~ 76,
+      blknr == 116086 ~ 86,
+      TRUE ~ WKR_NR
+    ),
+    WKR_NAME = case_when(
+      blknr == 106900 ~ "Berlin-Pankow",
+      blknr == 116086 ~ "Berlin-Lichtenberg",
+      TRUE ~ WKR_NAME
+    )
+  )
+
+filter(berlin_final, blknr %in% c(106900, 116086))
+
+# Now, let's explore which AWKs have more than one assigned constituency:
+
+awk_with_multiple_wkrs <- berlin_final %>%
+  group_by(AWK) %>%
+  summarise(num_WKR_NR = n_distinct(WKR_NR)) %>%
+  filter(num_WKR_NR > 1) %>%
+  arrange(AWK) # Optional: Arrange by AWK for easier readability
+
+# Print AWKs allocated to more than one WKR_NR, one row per AWK
+print(awk_with_multiple_wkrs)
+```
+
+```{r}
+berlin_final <- berlin_final %>%
+  mutate(AWK = as.factor(AWK), WKR_NR = as.factor(WKR_NR)) %>%
+  group_by(AWK) %>%
+  mutate(WKR_NR_count = n_distinct(WKR_NR)) %>%
+  ungroup()
+
+# Assigning each WKR_NR within each AWK a sequence number
+berlin_final <- berlin_final %>%
+  group_by(AWK) %>%
+  mutate(WKR_NR_seq = as.integer(factor(WKR_NR, levels = unique(WKR_NR)))) %>%
+  ungroup()
+
+# Converting sequence numbers to letters and creating modified AWK codes
+berlin_final <- berlin_final %>%
+  mutate(AWK_mod = if_else(WKR_NR_count > 1, 
+                           paste0(AWK, "_", letters[WKR_NR_seq]), 
+                           as.character(AWK)))
+
+# Aggregating data based on AWK_mod, WKR_NR, and WKR_NAME
+aggregated_data <- berlin_final %>%
+  group_by(AWK_mod, WKR_NR, WKR_NAME) %>%
+  summarise(
+    total_population = sum(total, na.rm = TRUE),
+    geometry = sf::st_union(geometry),
+    .groups = 'drop'
+  )
+
+# Inspect the result
+print(head(aggregated_data))
+```
+
+Now, we are ready for redistricting based on the electoral districts of the Abgeordnetenhaus (which is one administrative level below the Federal Constituencies). There is, however, one issue: In the original data (RBS blocks), directly neighboring blocks are not always spatially contingent since they are separated by streets. This, however, is necessary to be able to use the redist package. Since the neighboring blocks are not even touching, it is not possible to use st_union in order to combine blocks to the AWK districts. Hence, I am using a little workaround: After aggregating the population figures per AWK district, I can import the official geometry for these districts and simply add the population figures. As a result, I am receiving a sf object including all necessary (unionized) districts and the corresponding population. Additionally, I can add the corresponding Federal constituency to each AWK district. The only limitation with this approach is that there are four of the 78 AWK districts in which the borders do not match the higher level constituency border perfectly (hence, one AWK district is split between two constituencies). In these four cases, I will manually assign the part of the AWK with the lower population to the constituency of the other part.
+
+```{r}
+
+# Manually assigning split AWK districts to only one Federal constituency (this includes assigning two split districts entirely to Pankow, one to Friedrichshain-Kreuzberg – Prenzlauer Berg Ost and one to Berlin-Spandau – Charlottenburg Nord)
+
+awk_aggregated_data <- as.data.frame(aggregated_data)
+awk_aggregated_data <- select(awk_aggregated_data, -geometry)
+
+awk_aggregated_data <- awk_aggregated_data %>%
+  mutate(
+    group_id = case_when(
+      str_starts(AWK_mod, "0307") ~ "0307",
+      str_starts(AWK_mod, "0308") ~ "0308",
+      str_starts(AWK_mod, "0309") ~ "0309",
+      str_starts(AWK_mod, "0401") ~ "0401",
+      TRUE ~ AWK_mod
+    )
+  ) %>%
+  group_by(group_id) %>%
+  summarise(
+    total_population = sum(total_population, na.rm = TRUE),
+    WKR_NR = case_when(
+      group_id %in% c("0307", "0308") ~ "76",
+      group_id == "0309" ~ "83",
+      group_id == "0401" ~ "78",
+      TRUE ~ WKR_NR  # Assuming WKR_NR is already present, might need adjustment
+    ),
+    WKR_NAME = case_when(
+      group_id %in% c("0307", "0308") ~ "Berlin-Pankow",
+      group_id == "0309" ~ "Berlin-Friedrichshain-Kreuzberg – Prenzlauer Berg Ost",
+      group_id == "0401" ~ "Berlin-Spandau – Charlottenburg Nord",
+      TRUE ~ WKR_NAME  # Assuming WKR_NAME is already present, might need adjustment
+    ),
+    .groups = 'drop'
+  )
+
+awk_aggregated_data <- distinct(awk_aggregated_data)
+```
+
+```{r}
+shapefile_path_ah_wk <- "Data sources/RBS_OD_Wahlkreise_AH2021/AWK_AH21_25833.shp"
+ah_wk <- st_read(shapefile_path_ah_wk)
+
+# Ensure the second shapefile has the same CRS as the first
+if (!st_crs(ah_wk) == utm_crs_germany) {
+  ah_wk <- st_transform(ah_wk, utm_crs_germany)
+}
+
+
+ah_wk <- ah_wk %>%
+  left_join(awk_aggregated_data, by = c("AWK" = "group_id"))
+```
+
+
+```{r}
+library(redist)
+
+berlin_redist <- redist_map(ah_wk, existing_plan = WKR_NR, pop_tol = 0.25, total_pop = total_population)
 ```
 
