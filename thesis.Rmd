@@ -631,6 +631,8 @@ print(head(aggregated_data))
 
 Now, we are ready for redistricting based on the electoral districts of the Abgeordnetenhaus (which is one administrative level below the Federal Constituencies). There is, however, one issue: In the original data (RBS blocks), directly neighboring blocks are not always spatially contingent since they are separated by streets. This, however, is necessary to be able to use the redist package. Since the neighboring blocks are not even touching, it is not possible to use st_union in order to combine blocks to the AWK districts. Hence, I am using a little workaround: After aggregating the population figures per AWK district, I can import the official geometry for these districts and simply add the population figures. As a result, I am receiving a sf object including all necessary (unionized) districts and the corresponding population. Additionally, I can add the corresponding Federal constituency to each AWK district. The only limitation with this approach is that there are four of the 78 AWK districts in which the borders do not match the higher level constituency border perfectly (hence, one AWK district is split between two constituencies). In these four cases, I will manually assign the part of the AWK with the lower population to the constituency of the other part.
 
+
+
 ```{r}
 
 # Manually assigning split AWK districts to only one Federal constituency (this includes assigning two split districts entirely to Pankow, one to Friedrichshain-Kreuzberg – Prenzlauer Berg Ost and one to Berlin-Spandau – Charlottenburg Nord)
@@ -687,6 +689,6 @@ ah_wk <- ah_wk %>%
 ```{r}
 library(redist)
 
-berlin_redist <- redist_map(ah_wk, existing_plan = WKR_NR, pop_tol = 0.25, total_pop = total_population)
+berlin_redist <- redist_map(ah_wk, existing_plan = WKR_NR, ndists = 13, pop_tol = 0.25, total_pop = total_population)
 ```
 
