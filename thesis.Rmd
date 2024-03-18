@@ -689,6 +689,38 @@ ah_wk <- ah_wk %>%
 ```{r}
 library(redist)
 
-berlin_redist <- redist_map(ah_wk, existing_plan = WKR_NR, ndists = 13, pop_tol = 0.25, total_pop = total_population)
+# The next prompt creates a new dataframe and makes sure that a thirteenth district is added by settint `ndists` = 13. Additionally, we add the population tolerance of 25 %. However, one minor issue arises here: the pop_tol argument takes the values from the total_population as baseline. However, we must acknowledge that most of the Berlin districts have already higher populatino figures than the Germany-wide average. Thus, a deviation of 25 % Berlin-wide would lead to a deviation of more than 25 % Germany-wide. Thus, we additionally specify population bounds, where the target is the nation-wide average per constituency, and the lower and upper bound are the 25 % deviations from that target value. 
+
+# Calculating lower and upper bounds. Target is already stored in the divisor object. 
+
+lower <- divisor * 0.75
+upper <- divisor * 1.25
+
+berlin_redist <- redist_map(ah_wk, ndists = 13, pop_tol = 0.25, total_pop = total_population, pop_bounds =  c(lower, divisor, upper))
+
+```
+
+```{r}
+plot(berlin_redist) + plot(ah_wk, AWK = T)
+```
+
+```{r}
+areas = as.numeric(units::set_units(sf::st_area(berlin_redist$geometry), km^2))
+plot(berlin_redist, fill = total_population / areas) + 
+    scale_fill_viridis_c(name="Population density (people / sq. km)", 
+                         trans="sqrt")
+```
+
+```{r}
+berlin_plans = redist_smc(berlin_redist, nsims=500, counties = WKR_NAME, compactness = 1, runs = 2)
+```
+
+```{r}
+redist.plot.plans(berlin_plans, draws=1:1, shp=berlin_redist)
+```
+
+```{r}
+berlin_plans = match_numbers(berlin_plans, berlin_redist$WKR_NAME)
+print(berlin_plans)
 ```
 
