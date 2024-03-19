@@ -249,7 +249,7 @@ ggplot(data = btw_21_sf) +
 # Display the plot
 ggsave("population_deviation_map.png", width = 12, height = 8, dpi = 300)
 ```
-Now, I am creating a similar plot that only shows the constituencies that have a deviation of below -15 %or above 15 %. These constituencies should, when possible, be redistricted. 
+Now, I am creating a similar plot that only shows the constituencies that have a deviation of below -15 % or above 15 %. These constituencies should, when possible, be redistricted. 
 ```{r}
 btw_21_sf <- btw_21_sf |> 
   mutate(deviation15 = ifelse(deviation < -15 | deviation > 15, 1, 0))
@@ -701,6 +701,27 @@ berlin_redist <- redist_map(ah_wk, ndists = 13, pop_tol = 0.25, total_pop = tota
 ```
 
 ```{r}
+# Adding a pseudo-block with 0 population to berlin_redist and the original ah_wk objects to ensure that there is already a block assigned to a thirteenth district. This step is necessary to later be able to evaluate the differences in population per constituency. This is only available if the new number of districts matches the old number of districts. 
+
+new_row <- data.frame(
+  AWK = as.character("999"),
+  WKR_NR = as.character("999"),
+  WKR_NAME = "Berlin-New",
+  total_population = 0,
+  stringsAsFactors = FALSE  
+)
+
+berlin_redist <- bind_rows(berlin_redist, new_row)
+ah_wk <- bind_rows(ah_wk, new_row)
+```
+
+
+
+
+
+
+
+```{r}
 plot(berlin_redist) + plot(ah_wk, AWK = T)
 ```
 
@@ -722,5 +743,99 @@ redist.plot.plans(berlin_plans, draws=1:1, shp=berlin_redist)
 ```{r}
 berlin_plans = match_numbers(berlin_plans, berlin_redist$WKR_NAME)
 print(berlin_plans)
+```
+```{r}
+berlin_plans <- berlin_plans |> 
+  mutate(district = district + 74)
+```
+
+```{r}
+block_assignment <- as.data.frame(get_plans_matrix(berlin_plans))
+
+awk <- ah_wk |> 
+  select(AWK)
+
+
+block_assignment <-  bind_cols(awk, block_assignment)
+
+```
+
+```{r}
+block_assignment |> 
+  select(AWK, V1, geometry) |> 
+  plot()
+```
+
+```{r}
+block_assignment <- block_assignment %>%
+  mutate(across(-AWK, ~ . + 74))
+```
+
+```{r}
+if (!inherits(block_assignment, "sf")) {
+  block_assignment <- st_as_sf(block_assignment)
+}
+
+# Plotting the blocks with colors based on the district assignment (V1)
+ggplot(block_assignment) +
+  geom_sf(aes(fill = as.factor(V1)), color = NA) + # Remove border color by setting color = NA
+  scale_fill_viridis_d(name = "District") + # Use a discrete color scale for districts
+  labs(title = "Block Assignment to Districts", subtitle = "Each color represents a different district") +
+  theme_minimal() +
+  theme(legend.position = "right")
+```
+
+```{r}
+original_assignment <- ah_wk |> 
+  select(AWK, WKR_NR, WKR_NAME)
+
+blocks_per_district <- original_assignment %>%
+  group_by(WKR_NAME) %>%
+  summarise(Blocks = toString(AWK), .groups = 'drop')
+
+print(blocks_per_district)
+```
+```{r}
+blocks_per_district <- block_assignment %>%
+  group_by(V1) %>%
+  summarise(Blocks = toString(AWK), .groups = 'drop')
+
+print(blocks_per_district)
+```
+```{r}
+library(dplyr)
+library(stringr)
+
+# Define a function to recode AWK values to district names
+recode_awks_to_district <- function(awk) {
+  case_when(
+    awk %in% paste0("010", 1:7) ~ "Berlin-Mitte",
+    awk %in% c(paste0("020", 1:6), "0309") ~ "Berlin-Friedrichshain-Kreuzberg – Prenzlauer Berg Ost",
+    awk %in% paste0("030", 1:8) ~ "Berlin-Pankow",
+    awk %in% paste0("040", 2:7) ~ "Berlin-Charlottenburg-Wilmersdorf",
+    awk == "0401" | awk %in% paste0("050", 1:5) ~ "Berlin-Spandau – Charlottenburg Nord",
+    awk %in% paste0("060", 1:7) ~ "Berlin-Steglitz-Zehlendorf",
+    awk %in% paste0("070", 1:7) ~ "Berlin-Tempelhof-Schöneberg",
+    awk %in% paste0("080", 1:6) ~ "Berlin-Neukölln",
+    awk %in% paste0("090", 1:6) ~ "Berlin-Treptow-Köpenick",
+    awk %in% paste0("100", 1:6) ~ "Berlin-Marzahn-Hellersdorf",
+    awk %in% paste0("110", 1:6) ~ "Berlin-Lichtenberg",
+    awk %in% paste0("120", 1:6) ~ "Berlin-Reinickendorf",
+    TRUE ~ NA_character_  # Use NA as a placeholder for blocks not matching any set
+  )
+}
+
+# Apply the function to create a new variable with district labels
+block_assignment <- block_assignment %>%
+  mutate(district_label = recode_awks_to_district(AWK))
+
+# Assign unique labels to NAs based on a sequence
+new_blocks <- which(is.na(block_assignment$district_label))
+block_assignment$district_label[new_blocks] <- paste0("new_block_", seq_along(new_blocks))
+
+# Print V1 and the new variable next to each other for review
+block_assignment |> select(AWK, V1, district_label)
+
+
 ```
 
