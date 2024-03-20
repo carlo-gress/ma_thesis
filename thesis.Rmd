@@ -216,7 +216,7 @@ cat("Average German Population:", sprintf("%.2f", average_german_population), "\
 cat("Average Foreigners Percentage:", sprintf("%.2f", average_foreigners_percentage), "\n")
 ```
 
-Creating a new variable that indicates the deviation of the German population from the average German population as a share. Additionally, we add the gemometry of the constituencies in order to be able to plot the later results. For that purpose, we cann use the `wahlkreise_germany` object
+Creating a new variable that indicates the deviation of the German population from the average German population as a share. Additionally, we add the gemometry of the constituencies in order to be able to plot the later results. For that purpose, we can use the `wahlkreise_germany` object
 
 ```{r}
 btw_21 <- btw_21 |> 
@@ -247,7 +247,23 @@ ggplot(data = btw_21_sf) +
   theme(legend.position = "right")
 
 # Display the plot
-ggsave("population_deviation_map.png", width = 12, height = 8, dpi = 300)
+ggsave("final_figures/population_deviation_map.png", width = 12, height = 8, dpi = 300)
+```
+
+```{r}
+btw_21_sf |> 
+  filter(Country == "Berlin") |> 
+  ggplot() +
+  geom_sf(aes(fill = deviation), color = "0.8", size = 0.8) +
+  scale_fill_distiller(palette = "RdBu", name = "Deviation (in %)", limits = c(min(btw_21_sf$deviation, na.rm = TRUE), max(btw_21_sf$deviation, na.rm = TRUE))) +
+  theme_void() +
+  theme(plot.title = element_text(size = 16),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12)) +
+  theme(legend.position = "right")
+
+# Display the plot
+ggsave("final_figures/population_deviation_map_berlin.png", width = 12, height = 8, dpi = 300)
 ```
 Now, I am creating a similar plot that only shows the constituencies that have a deviation of below -15 % or above 15 %. These constituencies should, when possible, be redistricted. 
 ```{r}
@@ -279,6 +295,66 @@ cat("District with min. deviation:", btw_21_sf$DistrictName[which.min(btw_21_sf$
 cat("District with max. deviation:", btw_21_sf$DistrictName[which.max(btw_21_sf$deviation)], sprintf("(%.2f)", max(btw_21_sf$deviation)), "\n")
 
 ```
+
+Map that shows the deviation including non-residents: 
+```{r}
+btw_21_sf <- btw_21_sf |> 
+  mutate(deviation_non_residents = (TotalPopulation - average_total_population) / average_total_population * 100)
+
+ggplot(data = btw_21_sf) +
+  geom_sf(aes(fill = deviation_non_residents), color = "0.8", size = 0.8) +
+  scale_fill_distiller(palette = "RdBu", name = "Deviation (in %)", limits = c(min(btw_21_sf$deviation_non_residents, na.rm = TRUE), max(btw_21_sf$deviation_non_residents, na.rm = TRUE))) +
+  theme_void() +
+  theme(plot.title = element_text(size = 16),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12)) +
+  theme(legend.position = "right")
+
+ggsave("final_figures/deviation_nr.png", width = 12, height = 8, dpi = 300)
+```
+
+Map that shows deviation incl. non-residents but only highlighting constituencies with below -25 % / above 25 % deviation
+
+```{r}
+btw_21_sf <- btw_21_sf |> 
+  mutate(deviation25_nr = ifelse(deviation_non_residents < -25 | deviation_non_residents > 25, 1, 0))
+
+# Plot all constituencies, coloring by deviation value or grey if not significant
+ggplot(data = btw_21_sf) +
+  geom_sf(data = btw_21_sf %>% filter(deviation25_nr == 0), fill = "grey", color = NA, size = 0.1) +
+  geom_sf(data = btw_21_sf %>% filter(deviation25_nr == 1), aes(fill = deviation_non_residents), color = NA, size = 0.1) +
+  scale_fill_distiller(palette = "RdBu", name = "Deviation (in per cent)", 
+                       limits = c(min(btw_21_sf$deviation_non_residents, na.rm = TRUE), max(btw_21_sf$deviation_non_residents, na.rm = TRUE))) +
+  theme_void() +
+  theme(plot.title = element_text(size = 16),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        legend.position = "right")
+
+ggsave("final_figures/deviation25_nr.png", width = 12, height = 8, dpi = 300)
+```
+Berlin map highlighting problematic constituencies and labels them
+```{r}
+
+berlin_non_residents <- btw_21_sf |>  
+  filter(Country == "Berlin") 
+
+  ggplot(data = berlin_non_residents) +
+  geom_sf(data = berlin_non_residents %>% filter(deviation25_nr == 0), fill = "grey", color = NA, size = 0.1) +
+  geom_sf(data = berlin_non_residents %>% filter(deviation25_nr == 1), aes(fill = deviation_non_residents), color = NA, size = 0.1) +
+  scale_fill_distiller(palette = "RdBu", name = "Deviation (in per cent)", 
+                       limits = c(min(berlin_non_residents$deviation_non_residents, na.rm = TRUE), max(berlin_non_residents$deviation_non_residents, na.rm = TRUE))) +
+  theme_void() +
+  theme(plot.title = element_text(size = 16),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        legend.position = "right")
+```
+
+
+
+
+
 
 Next, we are creating a plot that shows the foreigner's percentage per constituency. Additionally, we'll highlight the constituencies with the min/max value.
 
@@ -416,7 +492,21 @@ result_df_summary <- result_df %>%
 
 # Print the updated dataframe with the summary row
 print(result_df_summary)
+
+latex_table <- result_df_summary %>%
+  kable("latex", booktabs = TRUE) %>% 
+  kable_styling(latex_options = c("striped", "scale_down"))
+
+# To save the LaTeX table to a file
+writeLines(as.character(latex_table), "tables/constituenciy_allocation.tex")
 ```
+
+Deviation map when non-residents are considered 
+
+```{r}
+
+```
+
 
 ## Berlin demographics
 
@@ -549,6 +639,19 @@ final_table <- combined_table %>%
   arrange(desc(deviation_new))
 
 print(final_table)
+```
+```{r}
+library(knitr)
+library(kableExtra)
+
+# Assuming final_table is your dataframe
+latex_table <- final_table %>%
+  kable("latex", booktabs = TRUE) %>% 
+  kable_styling(latex_options = c("striped", "scale_down"))
+
+# To save the LaTeX table to a file
+writeLines(as.character(latex_table), "tables/pop_deviation_berlin.tex")
+
 ```
 
 
