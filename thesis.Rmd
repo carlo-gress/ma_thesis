@@ -37,15 +37,30 @@ utm_crs_germany <- st_crs(wahlkreise_germany)
 # Plot the shapefile on a map without labels and the coordinate system
 g <- ggplot() +
   geom_sf(data = wahlkreise_germany, fill = "white", color = "black") +
-  labs(title = "German Wahlkreise", x = NULL, y = NULL) + # Remove axis titles
+  labs(x = NULL, y = NULL) + # Remove axis titles
   theme_void() + # This removes background, gridlines, and text
   theme(plot.title = element_text(hjust = 0.5)) # Center the title
 
-ggsave("wahlkreise_germany_map_large.png", plot = g, width = 16, height = 12, dpi = 300)
+ggsave("final_figures/wahlkreise_germany_map_large.png", plot = g, width = 16, height = 12, dpi = 300)
 ```
 
 ## Berlin (Electoral district borders for state elections, "Abgeordnetenhauswahl")
 
+
+Constituency map
+```{r}
+g <- wahlkreise_germany |> 
+  filter(LAND_NAME == "Berlin") |> 
+  ggplot() +
+  geom_sf(fill = "white", color = "black") +
+  labs(x = NULL, y = NULL) + # Remove axis titles
+  theme_void() + # This removes background, gridlines, and text
+  theme(plot.title = element_text(hjust = 0.5)) # Center the title
+
+ggsave("final_figures/wahlkreise_berlin.png", plot = g, width = 16, height = 12, dpi = 300)
+```
+
+Abgeordnetenhaus
 ```{r}
 shapefile_path_ah_wk <- "Data sources/RBS_OD_Wahlkreise_AH2021/AWK_AH21_25833.shp"
 ah_wk <- st_read(shapefile_path_ah_wk)
@@ -941,4 +956,5 @@ block_assignment |> select(AWK, V1, district_label)
 
 
 ```
+
 
