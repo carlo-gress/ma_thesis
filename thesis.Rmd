@@ -36,12 +36,36 @@ utm_crs_germany <- st_crs(wahlkreise_germany)
 
 # Plot the shapefile on a map without labels and the coordinate system
 g <- ggplot() +
-  geom_sf(data = wahlkreise_germany, fill = "white", color = "black") +
+  geom_sf(data = wahlkreise_germany, fill = "white", color = "black", linewidth = 1.5) +
   labs(x = NULL, y = NULL) + # Remove axis titles
   theme_void() + # This removes background, gridlines, and text
   theme(plot.title = element_text(hjust = 0.5)) # Center the title
 
 ggsave("final_figures/wahlkreise_germany_map_large.png", plot = g, width = 16, height = 12, dpi = 300)
+```
+Geographically largest and smallest constituency
+
+```{r}
+# Ensure wahlkreise_germany is an sf object
+wahlkreise_germany <- st_as_sf(wahlkreise_germany)
+
+# Transform geometries to a suitable projection for area calculation in Germany (e.g., ETRS89 / UTM zone 32N)
+wahlkreise_germany <- st_transform(wahlkreise_germany, 25832)
+
+# Calculate area in square kilometers
+wahlkreise_germany <- wahlkreise_germany %>%
+  mutate(area_km2 = st_area(geometry) / 10^6)  # st_area() results are in square meters; convert to square kilometers
+
+# Find the rows with the largest and smallest area
+largest_area <- wahlkreise_germany[which.max(wahlkreise_germany$area_km2), ]
+smallest_area <- wahlkreise_germany[which.min(wahlkreise_germany$area_km2), ]
+
+# Display the WKR_NAME and area of the largest and smallest constituencies
+cat("Largest Area Constituency:\n")
+print(largest_area[, c("WKR_NAME", "area_km2")])
+
+cat("\nSmallest Area Constituency:\n")
+print(smallest_area[, c("WKR_NAME", "area_km2")])
 ```
 
 ## Berlin (Electoral district borders for state elections, "Abgeordnetenhauswahl")
@@ -52,7 +76,7 @@ Constituency map
 g <- wahlkreise_germany |> 
   filter(LAND_NAME == "Berlin") |> 
   ggplot() +
-  geom_sf(fill = "white", color = "black") +
+  geom_sf(fill = "white", color = "black", linewidth = 1.5) +
   labs(x = NULL, y = NULL) + # Remove axis titles
   theme_void() + # This removes background, gridlines, and text
   theme(plot.title = element_text(hjust = 0.5)) # Center the title
