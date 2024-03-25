@@ -68,8 +68,7 @@ cat("\nSmallest Area Constituency:\n")
 print(smallest_area[, c("WKR_NAME", "area_km2")])
 ```
 
-## Berlin (Electoral district borders for state elections, "Abgeordnetenhauswahl")
-
+## Berlin (Constituencies and Electoral district borders for state elections, "Abgeordnetenhauswahl")
 
 Constituency map
 ```{r}
@@ -276,17 +275,18 @@ btw_21_sf <- st_as_sf(btw_21, crs = st_crs(utm_crs_germany))
 Next, we will create a plot that shows how much the constituencies deviate from the average population number 
 
 ```{r}
+
 ggplot(data = btw_21_sf) +
   geom_sf(aes(fill = deviation), color = "0.8", size = 0.8) +
-  scale_fill_distiller(palette = "RdBu", name = "Deviation (in %)", limits = c(min(btw_21_sf$deviation, na.rm = TRUE), max(btw_21_sf$deviation, na.rm = TRUE))) +
+  scale_fill_distiller(palette = "RdBu", name = "Deviation (in %)", limits = c(min(btw_21_sf$deviation_non_residents, na.rm = TRUE), max(btw_21_sf$deviation_non_residents, na.rm = TRUE))) +
   theme_void() +
   theme(plot.title = element_text(size = 16),
         axis.title.x = element_text(size = 12),
-        axis.title.y = element_text(size = 12)) +
-  theme(legend.position = "right")
+        axis.title.y = element_text(size = 12),
+        legend.position = "none")
 
-# Display the plot
 ggsave("final_figures/population_deviation_map.png", width = 12, height = 8, dpi = 300)
+
 ```
 
 ```{r}
@@ -314,16 +314,36 @@ ggplot(data = btw_21_sf) +
   geom_sf(data = btw_21_sf %>% filter(deviation15 == 0), fill = "grey", color = NA, size = 0.1) +
   geom_sf(data = btw_21_sf %>% filter(deviation15 == 1), aes(fill = deviation), color = NA, size = 0.1) +
   scale_fill_distiller(palette = "RdBu", name = "Deviation (in per cent)", 
-                       limits = c(min(btw_21_sf$deviation, na.rm = TRUE), max(btw_21_sf$deviation, na.rm = TRUE))) +
+                       limits = c(min(btw_21_sf$deviation_non_residents, na.rm = TRUE), max(btw_21_sf$deviation_non_residents, na.rm = TRUE))) +
   theme_void() +
   theme(plot.title = element_text(size = 16),
         axis.title.x = element_text(size = 12),
         axis.title.y = element_text(size = 12),
-        legend.position = "right")
+        legend.position = "none")
 
 ggsave("final_figures/deviation15.png", width = 12, height = 8, dpi = 300)
 ```
-Let's briefly check the minimum and maximum values of deviation as well as the number of consituencies with such a deviation. If a consituency falls below -25 or above 25 per cent deviation, it needs to be redistricted (mandatory). 
+Deviation -25/25
+```{r}
+btw_21_sf <- btw_21_sf |> 
+  mutate(deviation25 = ifelse(deviation < -25 | deviation > 25, 1, 0))
+
+# Plot all constituencies, coloring by deviation value or grey if not significant
+ggplot(data = btw_21_sf) +
+  geom_sf(data = btw_21_sf %>% filter(deviation25 == 0), fill = "grey", color = NA, size = 0.1) +
+  geom_sf(data = btw_21_sf %>% filter(deviation25 == 1), aes(fill = deviation), color = NA, size = 0.1) +
+  scale_fill_distiller(palette = "RdBu", name = "Deviation (in per cent)", 
+                       limits = c(min(btw_21_sf$deviation_non_residents, na.rm = TRUE), max(btw_21_sf$deviation_non_residents, na.rm = TRUE))) +
+  theme_void() +
+  theme(plot.title = element_text(size = 16),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        legend.position = "none")
+
+ggsave("final_figures/deviation25.png", width = 12, height = 8, dpi = 300)
+```
+
+Let's briefly check the minimum and maximum values of deviation as well as the number of constituencies with such a deviation. If a constituency falls below -25 or above 25 per cent deviation, it needs to be redistricted (mandatory). 
 
 ```{r}
 btw_21_sf |> 
@@ -347,9 +367,29 @@ ggplot(data = btw_21_sf) +
   theme(plot.title = element_text(size = 16),
         axis.title.x = element_text(size = 12),
         axis.title.y = element_text(size = 12)) +
-  theme(legend.position = "right")
+  theme(legend.position = "none")
 
 ggsave("final_figures/deviation_nr.png", width = 12, height = 8, dpi = 300)
+```
+Map that shows deviation incl. non-residents but only highlighting constituencies with below -15 % / above 15 % deviation
+
+```{r}
+btw_21_sf <- btw_21_sf |> 
+  mutate(deviation15_nr = ifelse(deviation_non_residents < -15 | deviation_non_residents > 15, 1, 0))
+
+# Plot all constituencies, coloring by deviation value or grey if not significant
+ggplot(data = btw_21_sf) +
+  geom_sf(data = btw_21_sf %>% filter(deviation15_nr == 0), fill = "grey", color = NA, size = 0.1) +
+  geom_sf(data = btw_21_sf %>% filter(deviation15_nr == 1), aes(fill = deviation_non_residents), color = NA, size = 0.1) +
+  scale_fill_distiller(palette = "RdBu", name = "Deviation (in per cent)", 
+                       limits = c(min(btw_21_sf$deviation_non_residents, na.rm = TRUE), max(btw_21_sf$deviation_non_residents, na.rm = TRUE))) +
+  theme_void() +
+  theme(plot.title = element_text(size = 16),
+        axis.title.x = element_text(size = 12),
+        axis.title.y = element_text(size = 12),
+        legend.position = "none")
+
+ggsave("final_figures/deviation15_nr.png", width = 12, height = 8, dpi = 300)
 ```
 
 Map that shows deviation incl. non-residents but only highlighting constituencies with below -25 % / above 25 % deviation
@@ -368,7 +408,7 @@ ggplot(data = btw_21_sf) +
   theme(plot.title = element_text(size = 16),
         axis.title.x = element_text(size = 12),
         axis.title.y = element_text(size = 12),
-        legend.position = "right")
+        legend.position = "none")
 
 ggsave("final_figures/deviation25_nr.png", width = 12, height = 8, dpi = 300)
 ```
