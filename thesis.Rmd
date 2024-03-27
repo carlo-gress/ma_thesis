@@ -412,6 +412,52 @@ ggplot(data = btw_21_sf) +
 
 ggsave("final_figures/deviation25_nr.png", width = 12, height = 8, dpi = 300)
 ```
+
+Calculate how many constituencies are deviating by more than 15/25 percent 
+
+```{r}
+# Without foreigner
+nrow(btw_21_sf |> filter(deviation15 == 1))
+nrow(btw_21_sf |> filter(deviation25 == 1))
+median(btw_21_sf$deviation)
+
+# With foreigner 
+nrow(btw_21_sf |> filter(deviation15_nr == 1))
+nrow(btw_21_sf |> filter(deviation25_nr == 1))
+median(btw_21_sf$deviation_non_residents)
+```
+
+```{r}
+btw21_df <- as.data.frame(btw_21_sf)
+
+# Reshaping the data to a long format
+btw21_long <- btw21_df %>%
+  select(deviation, deviation_non_residents) %>%
+  pivot_longer(cols = everything(), names_to = "variable", values_to = "value")
+
+# Ensure values are integers
+btw21_long$value <- round(btw21_long$value)
+
+ggplot(btw21_long, aes(x = value, fill = variable)) +
+  geom_histogram(binwidth = 2, alpha = 0.7, position = "dodge", color = "black") +
+  facet_wrap(~ variable, scales = "fixed", ncol = 1, labeller = labeller(variable = c(deviation = "German Population", deviation_non_residents = "Population incl. Foreigners"))) +
+  theme_minimal(base_size = 14) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1),
+        panel.border = element_rect(colour = "black", fill=NA, size=0.5)) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black", size = 0.5) +
+  scale_x_continuous(breaks = seq(from = floor(min(btw21_long$value)), to = ceiling(max(btw21_long$value)), by = 5)) +
+  scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
+  labs(y = "Frequency", x = "")
+
+ggsave("final_figures/distribution_deviation.png", width = 12, height = 8, dpi = 300)
+```
+
+
+
+
 Berlin map highlighting problematic constituencies and labels them
 ```{r}
 
