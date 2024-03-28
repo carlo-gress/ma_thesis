@@ -182,9 +182,9 @@ berlin_final_sf <- st_as_sf(berlin_final, crs = utm_crs_germany)
 
 # Plot the map using ggplot2
 ggplot() +
-  geom_sf(data = filter(berlin_final_sf, ewk != "unbewohnt"), aes(fill = "Occupied"), size = 0.5, alpha = 0.5) +
+  geom_sf(data = filter(berlin_final_sf, ewk != "unbewohnt"), aes(fill = "Inhabited"), size = 0.5, alpha = 0.5) +
   geom_sf(data = filter(berlin_final_sf, ewk == "unbewohnt"), aes(fill = "Unoccupied"), size = 0.5, alpha = 0.5) +
-  scale_fill_manual(values = c("Unoccupied" = "red", "Occupied" = "blue")) +
+  scale_fill_manual(values = c("Unoccupied" = "red", "Inhabited" = "blue")) +
   theme_void() + # Remove axes
   theme(legend.position = "right", legend.title = element_blank(), legend.text = element_text(size = 10))
 
@@ -272,9 +272,11 @@ btw_21 <- btw_21 %>%
 btw_21_sf <- st_as_sf(btw_21, crs = st_crs(utm_crs_germany))
 ```
 
-Next, we will create a plot that shows how much the constituencies deviate from the average population number 
+Next, we will create a plot that shows how much the constituencies deviate from the average population number (we will set the min/max values to the deviation values including foreigners. This is done to achieve a comparable color scaling later.)
 
 ```{r}
+btw_21_sf <- btw_21_sf |> 
+  mutate(deviation_non_residents = (TotalPopulation - average_total_population) / average_total_population * 100)
 
 ggplot(data = btw_21_sf) +
   geom_sf(aes(fill = deviation), color = "0.8", size = 0.8) +
@@ -357,8 +359,7 @@ cat("District with max. deviation:", btw_21_sf$DistrictName[which.max(btw_21_sf$
 
 Map that shows the deviation including non-residents: 
 ```{r}
-btw_21_sf <- btw_21_sf |> 
-  mutate(deviation_non_residents = (TotalPopulation - average_total_population) / average_total_population * 100)
+
 
 ggplot(data = btw_21_sf) +
   geom_sf(aes(fill = deviation_non_residents), color = "0.8", size = 0.8) +
@@ -448,15 +449,16 @@ ggplot(btw21_long, aes(x = value, fill = variable)) +
         axis.text.x = element_text(angle = 45, hjust = 1),
         panel.border = element_rect(colour = "black", fill=NA, size=0.5)) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "black", size = 0.5) +
+  geom_vline(xintercept = 15, linetype = "dashed", color = "red", size = 0.5) +
+  geom_vline(xintercept = -15, linetype = "dashed", color = "red", size = 0.5) +
+  geom_vline(xintercept = 25, linetype = "solid", color = "red", size = 0.5) +
+  geom_vline(xintercept = -25, linetype = "solid", color = "red", size = 0.5) +
   scale_x_continuous(breaks = seq(from = floor(min(btw21_long$value)), to = ceiling(max(btw21_long$value)), by = 5)) +
   scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
   labs(y = "Frequency", x = "")
 
 ggsave("final_figures/distribution_deviation.png", width = 12, height = 8, dpi = 300)
 ```
-
-
-
 
 Berlin map highlighting problematic constituencies and labels them
 ```{r}
@@ -475,11 +477,6 @@ berlin_non_residents <- btw_21_sf |>
         axis.title.y = element_text(size = 12),
         legend.position = "right")
 ```
-
-
-
-
-
 
 Next, we are creating a plot that shows the foreigner's percentage per constituency. Additionally, we'll highlight the constituencies with the min/max value.
 
