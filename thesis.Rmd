@@ -76,9 +76,7 @@ g <- wahlkreise_germany |>
   filter(LAND_NAME == "Berlin") |> 
   ggplot() +
   geom_sf(fill = "white", color = "black", linewidth = 1.5) +
-  labs(x = NULL, y = NULL) + # Remove axis titles
-  theme_void() + # This removes background, gridlines, and text
-  theme(plot.title = element_text(hjust = 0.5)) # Center the title
+  theme_void() 
 
 ggsave("final_figures/wahlkreise_berlin.png", plot = g, width = 16, height = 12, dpi = 300)
 ```
@@ -95,12 +93,11 @@ if (!st_crs(ah_wk) == utm_crs_germany) {
 
 # Plotting 
 ggplot() +
-  geom_sf(data = ah_wk, fill = "lightgray", color = "black") +
-  theme_void() + # Removes background, gridlines, and text
-  theme(plot.margin = margin(0, 0, 0, 0, "cm")) # Optional: Remove margins around the plot
+  geom_sf(data = ah_wk, fill = "white", color = "black", linewidth = 1.5) +
+  theme_void()
 
 # Saving
-ggsave("ah_wk_map_large.png", width = 15, height = 10, dpi = 300)
+ggsave("final_figures/ah_wk_map_large.png", width = 16, height = 12, dpi = 300)
 ```
 ### RBS-Blocks (most granular spatial level of Berlin geometry)
 
@@ -111,15 +108,10 @@ bloecke <- st_transform(bloecke, utm_crs_germany)
 
 # Plotting Blockflächen with specified aesthetics
 ggplot() +
-  geom_sf(data = bloecke, fill = "lightgray", color = "black") +
-  theme_void() + # Removes background, gridlines, and text
-  theme(plot.margin = margin(0, 0, 0, 0, "cm")) + # Optional: Remove margins around the plot
-  ggtitle("Blockflächen") + # Adds a title
-  theme(plot.title = element_text(hjust = 0.5)) # Center the title
+  geom_sf(data = bloecke, fill = "white", color = "black") +
+  theme_void() 
 
-# To display the plot in an R environment (like RStudio), just run the code above.
-# If you need to save the plot to a file, you can use ggsave with specified dimensions for a larger figure.
-ggsave("bloecke_map_large.png", width = 15, height = 10, dpi = 300)
+ggsave("final_figures/bloecke_map_large.png", width = 16, height = 12, dpi = 300)
 ```
 # Reading in data that has been spatially in joined in QGIS
 
@@ -136,7 +128,7 @@ ggplot() +
   theme_void() +
   theme(plot.margin = margin(0, 0, 0, 0, "cm"))
 
-ggsave("rbs_ah_bt_map.png", width = 15, height = 10, dpi = 300)
+ggsave("final_figures/rbs_map.png", width = 15, height = 10, dpi = 300)
 
 rbs_ah_bt_df <- as.data.frame(rbs_ah_bt)
 write.csv(rbs_ah_bt_df, "rbs_ah_bt.csv", row.names = FALSE)
