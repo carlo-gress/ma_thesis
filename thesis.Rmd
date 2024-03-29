@@ -451,6 +451,16 @@ ggplot(btw21_long, aes(x = value, fill = variable)) +
 
 ggsave("final_figures/distribution_deviation.png", width = 12, height = 8, dpi = 300)
 ```
+Foreigners Share by State
+```{r}
+btw_21_mean_sorted <- btw_21 %>%
+  group_by(Country) %>%
+  summarise(MeanForeignersPercentage = mean(ForeignersPercentage, na.rm = TRUE)) %>%
+  arrange(MeanForeignersPercentage) # Sorts the results in ascending order
+
+# View the resulting sorted data frame
+print(btw_21_mean_sorted)
+```
 
 Berlin map highlighting problematic constituencies and labels them
 ```{r}
