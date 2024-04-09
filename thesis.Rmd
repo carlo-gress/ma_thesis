@@ -18,6 +18,9 @@ library(leaflet)
 library(mapview)
 library(tmap)
 library(gridExtra)
+library(kableExtra)
+library(readxl)
+library(redist)
 ```
 
 # Loading required geodata files 
@@ -480,18 +483,12 @@ berlin_non_residents <- btw_21_sf |>
         legend.position = "right")
 ```
 
-Next, we are creating a plot that shows the foreigner's percentage per constituency. Additionally, we'll highlight the constituencies with the min/max value.
+Next, we are creating a plot that shows the foreigner's percentage per constituency. 
 
 ```{r}
-highlighted_constituencies <- highlighted_constituencies |>
-  mutate(centroid = st_centroid(geometry))
-
-# Now, use the calculated centroids for x and y in geom_text
 ggplot(data = btw_21_sf) +
   geom_sf(aes(fill = ForeignersPercentage), color = NA) +
   scale_fill_viridis_c(option = "plasma", name = "Foreigners Percentage") +
-  #geom_sf(data = highlighted_constituencies, color = "black", size = 0.5, show.legend = FALSE) +
- # geom_text(data = highlighted_constituencies, aes(x = st_coordinates(centroid)[,1], y = st_coordinates(centroid)[,2], label = paste0(DistrictName, "\n", sprintf("%.2f%%", ForeignersPercentage))), size = 3, color = "black") +
   theme_void() +
   theme(plot.title = element_text(size = 14),
         plot.subtitle = element_text(size = 10),
@@ -597,6 +594,7 @@ print(preliminary_districts_per_country)
 We can see from the output, that the algorithm worked and we receive 299 constituencies in total, distributed accordingly to the total population size. We can also see, that there have been some shifts between states. Let's create a table that indiactes the old and ew distribution of constituencies and also shows the change. 
 
 ```{r}
+
 result_df <- constituencies_per_state |> 
   left_join(preliminary_districts_per_country, by = "Country") |>
   mutate(Delta = PreliminaryDistricts - NumberOfConstituencies) |> 
@@ -625,19 +623,11 @@ latex_table <- result_df_summary %>%
 writeLines(as.character(latex_table), "tables/constituenciy_allocation.tex")
 ```
 
-Deviation map when non-residents are considered 
-
-```{r}
-
-```
-
-
 ## Berlin demographics
 
-Next, we have detailled demographic data on the RBS-block level for Berlin. This data originally came as one csv file per constituency. Each csv file is then again separated into several sheets, one for each city district. Let's read in the data. 
+Next, we have detailed demographic data on the RBS-block level for Berlin. This data originally came as one csv file per constituency. Each csv file is then again separated into several sheets, one for each city district. Let's read in the data. 
 
 ```{r}
-
 
 # Directory path
 directory_path <- '/Users/carlogress/Documents/GitHub/ma_thesis/Data sources/Blockdaten/'
@@ -659,7 +649,7 @@ combined_df <- map_df(xlsx_files, function(file_path) {
       set_names(new_columns) %>%
       slice(-1) 
   }, .id = "sheet_name")
-}, .id = "file_path") |> 
+}, .id = "file_path") %>%  
   filter(!is.na(block))
 
 # Display the combined DataFrame
@@ -930,26 +920,25 @@ berlin_redist <- redist_map(ah_wk, ndists = 13, pop_tol = 0.25, total_pop = tota
 ```{r}
 # Adding a pseudo-block with 0 population to berlin_redist and the original ah_wk objects to ensure that there is already a block assigned to a thirteenth district. This step is necessary to later be able to evaluate the differences in population per constituency. This is only available if the new number of districts matches the old number of districts. 
 
-new_row <- data.frame(
-  AWK = as.character("999"),
-  WKR_NR = as.character("999"),
-  WKR_NAME = "Berlin-New",
-  total_population = 0,
-  stringsAsFactors = FALSE  
-)
+#new_row <- data.frame(
+  #AWK = as.character("999"),
+  #WKR_NR = as.character("999"),
+  #WKR_NAME = "Berlin-New",
+  #total_population = 0,
+  #stringsAsFactors = FALSE  
+#)
 
-berlin_redist <- bind_rows(berlin_redist, new_row)
-ah_wk <- bind_rows(ah_wk, new_row)
+#berlin_redist <- bind_rows(berlin_redist, new_row)
+#ah_wk <- bind_rows(ah_wk, new_row)
 ```
 
 
-
-
-
-
-
 ```{r}
-plot(berlin_redist) + plot(ah_wk, AWK = T)
+plot(berlin_redist)
+
+png(filename = "final_figures/berlin_redist_plot.png", width = 12, height = 8, units = "in", res = 300)
+plot(berlin_redist)
+dev.off()
 ```
 
 ```{r}
@@ -964,7 +953,13 @@ berlin_plans = redist_smc(berlin_redist, nsims=500, counties = WKR_NAME, compact
 ```
 
 ```{r}
-redist.plot.plans(berlin_plans, draws=1:1, shp=berlin_redist)
+png(filename = "final_figures/simulations.png", width = 12, height = 8, units = "in", res = 300)
+
+# Generate the plot with specified parameters
+redist.plot.plans(berlin_plans, draws=1:6, shp=berlin_redist)
+
+# Close the PNG device to save the plot
+dev.off()
 ```
 
 ```{r}
