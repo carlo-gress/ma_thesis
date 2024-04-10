@@ -204,7 +204,7 @@ btw_21 <- read_delim(csv_file_path, delim = ';', skip = 8, col_names = TRUE, loc
 
 # Keep demographic variables only 
 btw_21 <- btw_21 |> 
-  select(1:17)
+  dplyr::select(1:17)
 
 # Rename the columns
 btw_21 <- btw_21 |> 
@@ -775,6 +775,9 @@ As we saw in the previous calculation, considering foreigners in the Berlin cons
 
 We are using the `redist` library in order to propose a redistricting scheme.
 
+
+
+
 ```{r}
 awk_to_wkr <- berlin_final %>%
   group_by(AWK, WKR_NR) %>%
@@ -905,6 +908,8 @@ ah_wk <- ah_wk %>%
 
 ```{r}
 library(redist)
+
+set.seed(123)
 
 # The next prompt creates a new dataframe and makes sure that a thirteenth district is added by settint `ndists` = 13. Additionally, we add the population tolerance of 25 %. However, one minor issue arises here: the pop_tol argument takes the values from the total_population as baseline. However, we must acknowledge that most of the Berlin districts have already higher populatino figures than the Germany-wide average. Thus, a deviation of 25 % Berlin-wide would lead to a deviation of more than 25 % Germany-wide. Thus, we additionally specify population bounds, where the target is the nation-wide average per constituency, and the lower and upper bound are the 25 % deviations from that target value. 
 
