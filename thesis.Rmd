@@ -841,6 +841,7 @@ aggregated_data <- berlin_final %>%
   group_by(AWK_mod, WKR_NR, WKR_NAME) %>%
   summarise(
     total_population = sum(total, na.rm = TRUE),
+    foreign_population = sum(foreigners, na.rm = T),
     geometry = sf::st_union(geometry),
     .groups = 'drop'
   )
@@ -873,6 +874,7 @@ awk_aggregated_data <- awk_aggregated_data %>%
   group_by(group_id) %>%
   summarise(
     total_population = sum(total_population, na.rm = TRUE),
+    foreign_population = sum(foreign_population, na.rm = T),
     WKR_NR = case_when(
       group_id %in% c("0307", "0308") ~ "76",
       group_id == "0309" ~ "83",
@@ -966,6 +968,49 @@ redist.plot.plans(berlin_plans, draws=1:6, shp=berlin_redist)
 # Close the PNG device to save the plot
 dev.off()
 ```
+
+
+
+
+
+# Tests 
+
+```{r}
+group_frac(
+  berlin_redist, foreign_population, total_population, berlin_plans)
+
+redist.group.percent(plans, foreign_population, total_population, ncores = 1)
+```
+
+```{r}
+std_dev_by_draw <- berlin_plans %>%
+  group_by(draw) %>%
+  summarise(std_dev = sd(total_pop, na.rm = TRUE)) %>%
+  arrange(std_dev) 
+
+png(filename = "final_figures/simulations_deviations.png", width = 12, height = 8, units = "in", res = 300)
+
+redist.plot.plans(std_dev_by_draw, draws = 1:5, shp = berlin_redist)
+
+dev.off()
+```
+
+
+```{r}
+btw_21_sf |> filter(Country == "Berlin") |> 
+  ggplot() +
+  geom_sf(aes(fill = as.factor(DistrictNo))) +  # Convert WKR_NR to a factor if it's numeric
+  labs(title = "Map of Berlin colored by WKR_NR",
+       fill = "DistrictNo") +
+  theme_void() 
+
+```
+
+```{r}
+library(patchwork)
+redist.plot.plans(berlin_plans, draws = c("1"), shp = berlin_redist)
+```
+
 
 ```{r}
 berlin_plans = match_numbers(berlin_plans, berlin_redist$WKR_NAME)
