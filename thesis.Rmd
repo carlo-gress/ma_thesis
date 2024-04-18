@@ -46,7 +46,7 @@ g <- ggplot() +
 
 ggsave("final_figures/wahlkreise_germany_map_large.png", plot = g, width = 16, height = 12, dpi = 300)
 ```
-Geographically largest and smallest constituency
+Finding the geographically largest and smallest constituency
 
 ```{r}
 # Ensure wahlkreise_germany is an sf object
@@ -974,6 +974,65 @@ dev.off()
 
 
 # Tests 
+
+```{r}
+berlin_plans$pop_deviation <- ((berlin_plans$total_pop - divisor) / divisor) 
+
+berlin_plans$draw <- as.factor(berlin_plans$draw)
+
+top_draws <- berlin_plans %>%
+  group_by(draw) %>%
+  summarise(mean_abs_pop_deviation = mean(abs(pop_deviation), na.rm = TRUE)) %>%
+  arrange(mean_abs_pop_deviation)
+
+# Display the results
+print(top_draws) 
+
+png(filename = "final_figures/simulations_deviations.png", width = 12, height = 8, units = "in", res = 300)
+
+redist.plot.plans(top_draws, draws = 1:6, shp = berlin_redist)
+
+dev.off()
+```
+
+```{r}
+mean_abs_dev <- berlin_plans %>%
+  group_by(draw) %>%
+  summarise(mean_abs_dev = mean(abs(pop_deviation), na.rm = TRUE)) %>%
+  ungroup()  # This step is to remove the grouping structure for plotting
+
+# Calculate the mean of mean absolute deviations
+mean_value <- mean(mean_abs_dev$mean_abs_dev, na.rm = TRUE)
+
+ ggplot(mean_abs_dev, aes(x = mean_abs_dev)) +
+  geom_density(color = "black", fill = "blue", alpha = 0.7)  +
+  labs(x = "Mean Absolute Deviation", y = "Frequency") +  # Simplified labels, no title
+  theme_minimal() +  # Start with minimal theme
+  theme(panel.grid.major = element_blank(),   # No major grid lines
+        panel.grid.minor = element_blank(),   # No minor grid lines
+        plot.title = element_blank(),         # No plot title
+        axis.title.x = element_text(size = 12, face = "plain"),  # X axis label
+        axis.title.y = element_text(size = 12, face = "plain"),  # Y axis label
+        axis.text = element_text(size = 10),  # Text size for axis
+        plot.background = element_blank(),    # Transparent background
+        panel.border = element_rect(colour = "black", fill = NA, size = 1))
+```
+
+```{r}
+ggplot(mean_abs_dev, aes(x = mean_abs_dev)) +
+  geom_histogram(binwidth = 0.005, color = "black", fill = "blue", alpha = 0.7) +
+  labs(x = "Mean Absolute Deviation", y = "Frequency") +  # Appropriate axis labels
+  theme_minimal() +  # Minimal theme for a clean look
+  theme(panel.grid.major = element_blank(),   # Remove major grid lines
+        panel.grid.minor = element_blank(),   # Remove minor grid lines
+        plot.title = element_blank(),         # No plot title
+        axis.title.x = element_text(size = 12, face = "plain"),  # X axis label
+        axis.title.y = element_text(size = 12, face = "plain"),  # Y axis label
+        axis.text = element_text(size = 10),  # Text size for axis
+        plot.background = element_blank(),    # Transparent background
+        panel.border = element_rect(colour = "black", fill = NA, size = 1))
+```
+
 
 ```{r}
 group_frac(
