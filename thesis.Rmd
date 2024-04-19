@@ -118,7 +118,7 @@ ggsave("final_figures/bloecke_map_large.png", width = 16, height = 12, dpi = 300
 ```
 # Reading in data that has been spatially in joined in QGIS
 
-### RBS blocks with consituency meta information
+### RBS blocks with constituency meta information
 
 ```{r}
 shapefile_path <- "Data sources/qgis spatial join/secondtry.shp"
@@ -1016,6 +1016,8 @@ mean_value <- mean(mean_abs_dev$mean_abs_dev, na.rm = TRUE)
         axis.text = element_text(size = 10),  # Text size for axis
         plot.background = element_blank(),    # Transparent background
         panel.border = element_rect(colour = "black", fill = NA, size = 1))
+ 
+ ggsave("final_figures/distribution_density.png", width = 12, height = 8, dpi = 300)
 ```
 
 ```{r}
