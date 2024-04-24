@@ -75,7 +75,7 @@ rbs_ah_bt <- st_read(shapefile_path)
 rbs_ah_bt <- st_transform(rbs_ah_bt, utm_crs_germany)
 
 rbs_ah_bt_df <- as.data.frame(rbs_ah_bt)
-write.csv(rbs_ah_bt_df, "rbs_ah_bt.csv", row.names = FALSE)
+write.csv(rbs_ah_bt_df, "Data sources/rbs_ah_bt.csv", row.names = FALSE)
 ```
 
 Since the RBS and the constituency borders are not perfectly aligned, some few blocks (26 out of the 15940 blocks) have been mistakenly assigned to the wrong constituencies. The next code chunk manually corrects the flawed values. 
@@ -895,7 +895,7 @@ mean_value <- mean(mean_abs_dev$mean_abs_dev, na.rm = TRUE)
 
 ```{r}
 ggplot(mean_abs_dev, aes(x = mean_abs_dev)) +
-  geom_histogram(binwidth = 0.005, color = "black", fill = "blue", alpha = 0.7) +
+  geom_histogram(binwidth = 0.003, color = "black", fill = "blue", alpha = 0.7) +
   labs(x = "Mean Absolute Deviation", y = "Frequency") +  # Appropriate axis labels
   theme_minimal() +  # Minimal theme for a clean look
   theme(panel.grid.major = element_blank(),   # Remove major grid lines
@@ -906,6 +906,8 @@ ggplot(mean_abs_dev, aes(x = mean_abs_dev)) +
         axis.text = element_text(size = 10),  # Text size for axis
         plot.background = element_blank(),    # Transparent background
         panel.border = element_rect(colour = "black", fill = NA, size = 1))
+
+ggsave("final_figures/deviation_hist.png", width = 12, height = 8, dpi = 300)
 ```
 
 
