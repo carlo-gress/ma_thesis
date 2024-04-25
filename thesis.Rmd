@@ -121,7 +121,7 @@ g <- ggplot() +
   theme_void() + # This removes background, gridlines, and text
   theme(plot.title = element_text(hjust = 0.5)) # Center the title
 
-ggsave("final_figures/wahlkreise_germany_map_large.png", plot = g, width = 16, height = 12, dpi = 300)
+ggsave("final_figures/figure 1/wahlkreise_germany_map_large.png", plot = g, width = 16, height = 12, dpi = 300)
 ```
 
 Berlin constituencies 
@@ -132,18 +132,17 @@ g <- wahlkreise_germany |>
   geom_sf(fill = "white", color = "black", linewidth = 1.5) +
   theme_void() 
 
-ggsave("final_figures/wahlkreise_berlin.png", plot = g, width = 16, height = 12, dpi = 300)
+ggsave("final_figures/figure 1/wahlkreise_berlin.png", plot = g, width = 16, height = 12, dpi = 300)
+ggsave("final_figures/figure 2/wahlkreise_berlin.png", plot = g, width = 16, height = 12, dpi = 300)
 ```
 
 Berlin state constituencies
 ```{r}
-# Plotting 
 g <- ggplot() +
   geom_sf(data = ah_wk, fill = "white", color = "black", linewidth = 1.5) +
   theme_void()
 
-# Saving
-ggsave("final_figures/ah_wk_map_large.png", plot = g, width = 16, height = 12, dpi = 300)
+ggsave("final_figures/figure 2/ah_wk_map_large.png", plot = g, width = 16, height = 12, dpi = 300)
 ```
 
 Berlin RBS-blocks
@@ -152,7 +151,7 @@ g <- ggplot() +
   geom_sf(data = bloecke, fill = "white", color = "black") +
   theme_void() 
 
-ggsave("final_figures/bloecke_map_large.png", plot = g, width = 16, height = 12, dpi = 300)
+ggsave("final_figures/figure 2/bloecke_map_large.png", plot = g, width = 16, height = 12, dpi = 300)
 ```
 
 Finding the geographically largest and smallest constituency (used in Section 4.1 on constituency data)
@@ -274,7 +273,7 @@ ggplot(data = btw_21_sf) +
         axis.title.y = element_text(size = 12),
         legend.position = "none")
 
-ggsave("final_figures/population_deviation_map.png", width = 12, height = 8, dpi = 300)
+ggsave("final_figures/figure 3/population_deviation_map.png", width = 12, height = 8, dpi = 300)
 
 ```
 
@@ -295,7 +294,7 @@ ggplot(data = btw_21_sf) +
         axis.title.y = element_text(size = 12),
         legend.position = "none")
 
-ggsave("final_figures/deviation15.png", width = 12, height = 8, dpi = 300)
+ggsave("final_figures/figure 3/deviation15.png", width = 12, height = 8, dpi = 300)
 ```
 Deviation -25/25
 ```{r}
@@ -314,7 +313,7 @@ ggplot(data = btw_21_sf) +
         axis.title.y = element_text(size = 12),
         legend.position = "none")
 
-ggsave("final_figures/deviation25.png", width = 12, height = 8, dpi = 300)
+ggsave("final_figures/figure 3/deviation25.png", width = 12, height = 8, dpi = 300)
 ```
 
 Let's briefly check the minimum and maximum values of deviation as well as the number of constituencies with such a deviation. If a constituency falls below -25 or above 25 per cent deviation, it needs to be redistricted (mandatory). 
@@ -340,7 +339,7 @@ ggplot(data = btw_21_sf) +
         axis.title.y = element_text(size = 12)) +
   theme(legend.position = "none")
 
-ggsave("final_figures/deviation_nr.png", width = 12, height = 8, dpi = 300)
+ggsave("final_figures/figure 3/deviation_nr.png", width = 12, height = 8, dpi = 300)
 ```
 Map that shows deviation incl. foreign residents but only highlighting constituencies with below -15 % / above 15 % deviation
 
@@ -360,7 +359,7 @@ ggplot(data = btw_21_sf) +
         axis.title.y = element_text(size = 12),
         legend.position = "none")
 
-ggsave("final_figures/deviation15_nr.png", width = 12, height = 8, dpi = 300)
+ggsave("final_figures/figure 3/deviation15_nr.png", width = 12, height = 8, dpi = 300)
 ```
 
 Map that shows deviation incl. foreign residents but only highlighting constituencies with below -25 % / above 25 % deviation
@@ -381,7 +380,7 @@ ggplot(data = btw_21_sf) +
         axis.title.y = element_text(size = 12),
         legend.position = "none")
 
-ggsave("final_figures/deviation25_nr.png", width = 12, height = 8, dpi = 300)
+ggsave("final_figures/figure 3/deviation25_nr.png", width = 12, height = 8, dpi = 300)
 ```
 
 ### Table 1
@@ -431,7 +430,7 @@ ggplot(btw21_long, aes(x = value, fill = variable)) +
   scale_y_continuous(labels = function(x) format(x, scientific = FALSE)) +
   labs(y = "Frequency", x = "Deviation (%)")
 
-ggsave("final_figures/distribution_deviation.png", width = 12, height = 8, dpi = 300)
+ggsave("final_figures/figure 4/distribution_deviation.png", width = 12, height = 8, dpi = 300)
 ```
 Foreigners Share by State (referenced in Section 6: Analysis)
 
@@ -459,7 +458,6 @@ constituencies_per_state <- btw_21 |>
   group_by(Country) |>
   summarise(NumberOfConstituencies = n())
 
-# Print the results
 cat("Average German Population:", sprintf("%.2f", average_german_population_per_row), "\n")
 cat("Average Total Population:", sprintf("%.2f", average_total_population), "\n")
 cat("Current number of constituencies per state:\n")
@@ -473,7 +471,7 @@ Next, we want to calculate how many constituencies each state should receive whe
 ```{r}
 divisor <- mean(btw_21$TotalPopulation, na.rm = TRUE)
 
-# Sum total population per country (Bundesland)
+# Sum total population per state (Bundesland)
 total_population_per_country <- btw_21 |>
   group_by(Country) |>
   summarise(TotalPopulation = sum(TotalPopulation, na.rm = TRUE)) |>
@@ -483,10 +481,8 @@ total_population_per_country <- btw_21 |>
 total_population_per_country <- total_population_per_country |>
   mutate(DividedPopulation = round(TotalPopulation / divisor))
 
-# Print the resulting divided population per country
 print(total_population_per_country)
 
-# Calculate and print the sum of the rounded electoral districts
 total_electoral_districts <- sum(total_population_per_country$DividedPopulation)
 cat("Total number of electoral districts:", total_electoral_districts, "\n")
 ```
@@ -533,12 +529,12 @@ while (total_districts != 299 && iterations < max_iterations) {
   cat(sprintf("Iteration %d: Total Districts = %d, Divisor = %.2f\n", iterations, total_districts, divisor))
 }
 
-# Print the final divisor and total electoral districts to check target achievement
+
 cat("Final iteration count:", iterations, "\n")
 cat("Final Divisor:", divisor, "\n")
 cat("Total Electoral Districts:", total_districts, "\n")
 
-# Display the final distribution of districts per country
+
 print(preliminary_districts_per_country)
 ```
 We can see from the output, that the algorithm worked and we receive 299 constituencies in total, distributed accordingly to the total population size. We can also see, that there have been some shifts between states. Let's create a table that indicates the old and new distribution of constituencies and also shows the change. 
@@ -562,14 +558,12 @@ result_df_summary <- result_df |>
           UpdatedNo = sum_new_constituencies, 
           Delta = sum_delta)
 
-# Print the updated dataframe with the summary row
 print(result_df_summary)
 
 latex_table <- result_df_summary |>
   kable("latex", booktabs = TRUE) |> 
   kable_styling(latex_options = c("striped", "scale_down"))
 
-# To save the LaTeX table to a file
 writeLines(as.character(latex_table), "tables/constituenciy_allocation.tex")
 ```
 
@@ -579,7 +573,6 @@ Next, we have detailed demographic data on the RBS-block level for Berlin. This 
 
 ```{r}
 
-# Directory path
 directory_path <- '/Users/carlogress/Documents/GitHub/ma_thesis/Data sources/Blockdaten/'
 
 # Define new column names in lowercase and underscores
@@ -602,7 +595,7 @@ combined_df <- map_df(xlsx_files, function(file_path) {
 }, .id = "file_path") |>  
   filter(!is.na(block))
 
-# Display the combined DataFrame
+
 print(head(combined_df))
 
 write.csv(combined_df, "Data Sources/Blockdaten/rbs_blocks_demographic.csv", row.names = FALSE)
@@ -671,12 +664,10 @@ print(final_table)
 library(knitr)
 library(kableExtra)
 
-# Assuming final_table is your dataframe
 latex_table <- final_table |>
   kable("latex", booktabs = TRUE) |> 
   kable_styling(latex_options = c("striped", "scale_down"))
 
-# To save the LaTeX table to a file
 writeLines(as.character(latex_table), "tables/pop_deviation_berlin.tex")
 ```
 
@@ -693,7 +684,6 @@ We are using the `redist` library in order to propose a redistricting scheme.
 Two (unoccupied) blocks have been assigned to the wrong AWK during the spatial join. Similarly, some state constituencies have been assigned to more than one federal constituencies, since the borders are not always congruent. The next chunk corrects the flawed allocation and checks which state constituencies are allocated to more than one federal constituency.
 
 ```{r}
-
 berlin_final <- berlin_final |> 
   mutate(
     WKR_NR = case_when(
@@ -783,13 +773,13 @@ awk_aggregated_data <- awk_aggregated_data |>
       group_id %in% c("0307", "0308") ~ "76",
       group_id == "0309" ~ "83",
       group_id == "0401" ~ "78",
-      TRUE ~ WKR_NR  # Assuming WKR_NR is already present, might need adjustment
+      TRUE ~ WKR_NR 
     ),
     WKR_NAME = case_when(
       group_id %in% c("0307", "0308") ~ "Berlin-Pankow",
       group_id == "0309" ~ "Berlin-Friedrichshain-Kreuzberg – Prenzlauer Berg Ost",
       group_id == "0401" ~ "Berlin-Spandau – Charlottenburg Nord",
-      TRUE ~ WKR_NAME  # Assuming WKR_NAME is already present, might need adjustment
+      TRUE ~ WKR_NAME  
     ),
     .groups = 'drop'
   )
@@ -808,6 +798,9 @@ if (!st_crs(ah_wk) == utm_crs_germany) {
 
 ah_wk <- ah_wk |>
   left_join(awk_aggregated_data, by = c("AWK" = "group_id"))
+
+ah_wk<- ah_wk |> 
+  mutate(german_pop = total_population - foreign_population)
 ```
 ## 3.2 Simulation
 
@@ -826,25 +819,14 @@ berlin_redist <- redist_map(ah_wk, ndists = 13, pop_tol = 0.25, total_pop = tota
 
 ```
 
-### Figure 5
-
-Figure 5 is an illustrative adjacency map of the 78 state constituencies
-
-```{r}
-plot(berlin_redist)
-
-png(filename = "final_figures/berlin_redist_plot.png", width = 12, height = 8, units = "in", res = 300)
-plot(berlin_redist)
-dev.off()
-```
-
+Running the simulation:
 ```{r}
 berlin_plans = redist_smc(berlin_redist, nsims=500, counties = WKR_NAME, compactness = 1, runs = 2)
 ```
 
-### Figure 6
+### Figure 5
 
-Figure 6 plots six of the simulated plans. However, it would be not appropriate to display six random draws. We should rather lookt at specific draws that are interesting due to some specifications. Here, I decided to look at the 6 draws that have the *minimum mean absolute population deviation across constituencies*. 
+Figure 5 plots six of the simulated plans. However, it would be not appropriate to display six random draws. We should rather look at specific draws that are interesting due to some specifications. Here, I decided to look at the 6 draws that have the *minimum mean absolute population deviation across constituencies*. 
 
 ```{r}
 berlin_plans$pop_deviation <- ((berlin_plans$total_pop - divisor) / divisor) 
@@ -856,17 +838,16 @@ top_draws <- berlin_plans |>
   summarise(mean_abs_pop_deviation = mean(abs(pop_deviation), na.rm = TRUE)) |>
   arrange(mean_abs_pop_deviation)
 
-# Display and save the results
-print(top_draws) 
-
-png(filename = "final_figures/simulations_deviations.png", width = 12, height = 8, units = "in", res = 300)
+png(filename = "final_figures/figure 5/simulations_deviations.png", width = 12, height = 8, units = "in", res = 300)
 
 redist.plot.plans(top_draws, draws = 1:6, shp = berlin_redist)
 
 dev.off()
 ```
 
-### Figure(s) 7
+### Figure 6
+
+Distribution of mean absolute deviation from the average constituency size
 ```{r}
 mean_abs_dev <- berlin_plans |>
   group_by(draw) |>
@@ -875,41 +856,73 @@ mean_abs_dev <- berlin_plans |>
 
 # Calculate the mean of mean absolute deviations
 mean_value <- mean(mean_abs_dev$mean_abs_dev, na.rm = TRUE)
-
- ggplot(mean_abs_dev, aes(x = mean_abs_dev)) +
-  geom_density(color = "black", fill = "blue", alpha = 0.7)  +
-  labs(x = "Mean Absolute Deviation", y = "Frequency") +  # Simplified labels, no title
-  theme_minimal() +  # Start with minimal theme
-  theme(panel.grid.major = element_blank(),   # No major grid lines
-        panel.grid.minor = element_blank(),   # No minor grid lines
-        plot.title = element_blank(),         # No plot title
-        axis.title.x = element_text(size = 12, face = "plain"),  # X axis label
-        axis.title.y = element_text(size = 12, face = "plain"),  # Y axis label
-        axis.text = element_text(size = 10),  # Text size for axis
-        plot.background = element_blank(),    # Transparent background
-        panel.border = element_rect(colour = "black", fill = NA, size = 1))
- 
- ggsave("final_figures/distribution_density.png", width = 12, height = 8, dpi = 300)
-```
-
-
-```{r}
 ggplot(mean_abs_dev, aes(x = mean_abs_dev)) +
   geom_histogram(binwidth = 0.003, color = "black", fill = "blue", alpha = 0.7) +
-  labs(x = "Mean Absolute Deviation", y = "Frequency") +  # Appropriate axis labels
-  theme_minimal() +  # Minimal theme for a clean look
-  theme(panel.grid.major = element_blank(),   # Remove major grid lines
-        panel.grid.minor = element_blank(),   # Remove minor grid lines
-        plot.title = element_blank(),         # No plot title
-        axis.title.x = element_text(size = 12, face = "plain"),  # X axis label
-        axis.title.y = element_text(size = 12, face = "plain"),  # Y axis label
-        axis.text = element_text(size = 10),  # Text size for axis
-        plot.background = element_blank(),    # Transparent background
+  labs(x = "Mean Absolute Deviation", y = "Frequency") +  
+  theme_minimal() + 
+  theme(panel.grid.major = element_blank(),   
+        panel.grid.minor = element_blank(),   
+        plot.title = element_blank(),   
+        axis.title.x = element_text(size = 12, face = "plain"),  
+        axis.title.y = element_text(size = 12, face = "plain"),  
+        axis.text = element_text(size = 10),  
+        plot.background = element_blank(),    
         panel.border = element_rect(colour = "black", fill = NA, size = 1))
 
-ggsave("final_figures/deviation_hist.png", width = 12, height = 8, dpi = 300)
+ggsave("final_figures/figure 6/deviation_hist.png", width = 12, height = 8, dpi = 300)
 ```
 
+### Figure 7
 
+In order to find the optimal plan, we can also create another simulation that adheres to a tighter population deviation limit of 15 per cent. This could be interesting for policy makers since constituencies were less likely to exceed the 25 per cent limit in the near future. Additionally, we might want to assure that the absolute number of German per constituency is relatively equal. The next chunk therefore sets tighter upper and lower limits, runs the same simulation as before (only aiming for higher compactness, so that an improved population balance is not achieved to worse compactness), and calculates the share and absolute number of the German population.
+```{r}
+set.seed(123)
+
+lower <- divisor * 0.85
+upper <- divisor * 1.15
+
+berlin_redist_15 <- redist_map(ah_wk, ndists = 13, pop_tol = 0.15, total_pop = total_population, pop_bounds =  c(lower, divisor, upper))
+
+berlin_plans_15 = redist_smc(berlin_redist_15, nsims=500, counties = WKR_NAME, compactness = 1.5, runs = 2)
+
+
+berlin_plans_15$german_share <- group_frac(berlin_redist_15,
+           german_pop,
+           total_population,
+           berlin_plans)
+
+berlin_plans_15$foreigners_share <- group_frac(berlin_redist_15,
+           foreign_population,
+           total_population,
+           berlin_plans)
+
+berlin_plans_15 <- berlin_plans_15 |> 
+  mutate(german_pop = total_pop * german_share)
+
+berlin_plans_15$pop_deviation <- ((berlin_plans_15$total_pop - divisor) / divisor)
+```
+
+Ultimately, the resulting simulation plans are ordered based on the standard deviation of the variable capturing the absolute number of Germans per constituency. 
+```{r}
+
+std_dev_filtered_draws <- berlin_plans_15 %>%
+  group_by(draw) %>%
+  summarize(
+    std_dev_german_pop = sd(german_pop, na.rm = TRUE)
+  ) %>%
+  arrange(std_dev_german_pop)
+
+berlin_plans_15 <- berlin_plans_15 %>%
+  inner_join(std_dev_filtered_draws, by = "draw")
+
+```
+The last chunk create Figure 8, which are the top 6 plans in which no constituency deviates more than 15 per cent from the mean population size, ordered based on the standard deviation of the German population.
+```{r}
+png(filename = "final_figures/figure 7/simulations_deviations_15.png", width = 12, height = 8, units = "in", res = 300)
+
+redist.plot.plans(std_dev_filtered_draws, draws = 1:6, shp = berlin_redist)
+
+dev.off()
+```
 
 
