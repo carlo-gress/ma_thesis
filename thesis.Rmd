@@ -420,7 +420,8 @@ ggplot(btw21_long, aes(x = value, fill = variable)) +
         panel.grid.minor = element_blank(),
         legend.position = "none",
         axis.text.x = element_text(angle = 45, hjust = 1),
-        panel.border = element_rect(colour = "black", fill=NA, size=0.5)) +
+        panel.border = element_rect(colour = "black", fill=NA, size=0.5),
+        strip.text = element_text(size = 16, face = "bold")) +  # Increased size and bold text for facet labels
   geom_vline(xintercept = 0, linetype = "dashed", color = "black", size = 0.5) +
   geom_vline(xintercept = 15, linetype = "dashed", color = "red", size = 0.5) +
   geom_vline(xintercept = -15, linetype = "dashed", color = "red", size = 0.5) +
@@ -432,13 +433,22 @@ ggplot(btw21_long, aes(x = value, fill = variable)) +
 
 ggsave("final_figures/figure 4/distribution_deviation.png", width = 12, height = 8, dpi = 300)
 ```
-Foreigners Share by State (referenced in Section 6: Analysis)
+Foreigners Share by State (referenced in Section 6: Analysis) and Appendix
 
 ```{r}
-btw_21 |>
-  group_by(Country) |>
-  summarise(MeanForeignersPercentage = mean(ForeignersPercentage, na.rm = TRUE)) |>
-  arrange(MeanForeignersPercentage) 
+table_latex <- btw_21 %>%
+  group_by(Country) %>%
+  summarise(
+    TotalSumPopulation = sum(TotalPopulation, na.rm = TRUE),
+    GermanSumPopulation = sum(GermanPopulation, na.rm = TRUE)
+  ) %>%
+  mutate(MeanForeignersPercentage = round((TotalSumPopulation - GermanSumPopulation) / TotalSumPopulation * 100, 2)) %>%
+  select(Country, MeanForeignersPercentage) %>%
+  arrange(MeanForeignersPercentage) %>%
+  kable("latex", booktabs = TRUE) %>%
+  kable_styling(latex_options = c("striped", "scale_down"))
+
+save_kable(table_latex, file = "tables/foreigners_share.tex")
 ```
 
 ### Table 2
@@ -849,6 +859,7 @@ dev.off()
 
 Distribution of mean absolute deviation from the average constituency size
 ```{r}
+
 mean_abs_dev <- berlin_plans |>
   group_by(draw) |>
   summarise(mean_abs_dev = mean(abs(pop_deviation), na.rm = TRUE)) |>
@@ -856,20 +867,24 @@ mean_abs_dev <- berlin_plans |>
 
 # Calculate the mean of mean absolute deviations
 mean_value <- mean(mean_abs_dev$mean_abs_dev, na.rm = TRUE)
+
+# Plotting
 ggplot(mean_abs_dev, aes(x = mean_abs_dev)) +
-  geom_histogram(binwidth = 0.003, color = "black", fill = "blue", alpha = 0.7) +
+  geom_histogram(binwidth = 0.003, color = "black", fill = "gray", alpha = 0.7) +
   labs(x = "Mean Absolute Deviation", y = "Frequency") +  
-  theme_minimal() + 
+  theme_minimal() +
   theme(panel.grid.major = element_blank(),   
         panel.grid.minor = element_blank(),   
         plot.title = element_blank(),   
-        axis.title.x = element_text(size = 12, face = "plain"),  
-        axis.title.y = element_text(size = 12, face = "plain"),  
-        axis.text = element_text(size = 10),  
+        axis.title.x = element_text(size = 14, face = "bold"),  
+        axis.title.y = element_text(size = 14, face = "bold"),  
+        axis.text = element_text(size = 12),  
         plot.background = element_blank(),    
         panel.border = element_rect(colour = "black", fill = NA, size = 1))
 
+# Save the plot
 ggsave("final_figures/figure 6/deviation_hist.png", width = 12, height = 8, dpi = 300)
+
 ```
 
 ### Figure 7
