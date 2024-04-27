@@ -316,7 +316,7 @@ ggplot(data = btw_21_sf) +
 ggsave("final_figures/figure 3/deviation25.png", width = 12, height = 8, dpi = 300)
 ```
 
-Let's briefly check the minimum and maximum values of deviation as well as the number of constituencies with such a deviation. If a constituency falls below -25 or above 25 per cent deviation, it needs to be redistricted (mandatory). 
+Let's briefly check the minimum and maximum values of deviation as well as the number of constituencies with such a deviation. If a constituency falls below -25 or above 25 per cent deviation, it needs to be redistricted (mandatory).
 
 ```{r}
 btw_21_sf |> 
@@ -325,7 +325,6 @@ btw_21_sf |>
 
 cat("District with min. deviation:", btw_21_sf$DistrictName[which.min(btw_21_sf$deviation)], sprintf("(%.2f)", min(btw_21_sf$deviation)), "\n")
 cat("District with max. deviation:", btw_21_sf$DistrictName[which.max(btw_21_sf$deviation)], sprintf("(%.2f)", max(btw_21_sf$deviation)), "\n")
-
 ```
 
 Map that shows the deviation including foreign residents: 
