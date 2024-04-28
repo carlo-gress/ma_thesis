@@ -32,7 +32,7 @@ List of R packages and other software dependencies required to run the scripts:
 - **readxl**
 - **redist**
 
-- ## Executive Summary
+## Executive Summary
 
 Prior to each federal election in Germany, it is necessary to revise the geographic boundaries of numerous constituencies to address shifts in demographic composition. Legally, the population size of any given constituency must not exceed a deviation of more than 25 per cent from the average constituency population size. Although finding optimal solutions for these redistricting problems remains a relevant task for policymakers, there currently is no universally accepted methodology for determining \textit{how} constituencies should be redistricted. This thesis uses Sequential Monte Carlo (SMC) simulations for proposing mathematically optimal redistricting plans.  \\
 
