@@ -882,7 +882,7 @@ ggplot(mean_abs_dev, aes(x = mean_abs_dev)) +
         panel.border = element_rect(colour = "black", fill = NA, size = 1))
 
 # Save the plot
-ggsave("final_figures/figure 6/deviation_hist.png", width = 12, height = 8, dpi = 300)
+ggsave("final_figures/figure A1/deviation_hist.png", width = 12, height = 8, dpi = 300)
 
 ```
 
@@ -932,7 +932,7 @@ berlin_plans_15 <- berlin_plans_15 %>%
 ```
 The last chunk create Figure 8, which are the top 6 plans in which no constituency deviates more than 15 per cent from the mean population size, ordered based on the standard deviation of the German population.
 ```{r}
-png(filename = "final_figures/figure 7/simulations_deviations_15.png", width = 12, height = 8, units = "in", res = 300)
+png(filename = "final_figures/figure 6/simulations_deviations_15.png", width = 12, height = 8, units = "in", res = 300)
 
 redist.plot.plans(std_dev_filtered_draws, draws = 1:6, shp = berlin_redist)
 
