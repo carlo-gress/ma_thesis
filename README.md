@@ -41,10 +41,3 @@ Related studies exclusively focused on the current legislation. This analysis co
 Since policymakers and scholars have debated whether this legislation should be adjusted, this thesis asks: How would it affect the demographic and geographic composition of federal constituencies in Germany if foreign residents were included in the population figures? After comparing the deviation values under the current legislation and a legislation in which foreign residents would be considered, this thesis calculates how many constituencies would be allocated to each federal state under the latter legislation. Furthermore, the twelve federal constituencies in Berlin are used for demonstrating the SMC redistricting simulation. The data is provided by the Federal Returning Officer (Bundeswahlleiterin, 2021) and the Amt für Statistik Brandenburg (2023). \\
 
 The analysis reveals that considering foreign residents when calculating the population figures has profound consequences: First, the population of numerous constituencies would exceed the limit (absolute deviations from the mean of more than 25 per cent), requiring geographic redistricting. Moreover, the number of constituencies per federal state, which is based on their population, would need to be adjusted: Some states would gain constituencies, while others would lose. Ultimately, the redistricting simulation demonstrates that SMC simulations are an effective tool for this task, successfully meeting all required legal standards. \\
-
-
-## Contact
-
-For any queries regarding the thesis, please contact:
-- Name: Carlo Greß
-- Email: carlo-gress@web.de
