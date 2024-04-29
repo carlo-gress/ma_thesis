@@ -10,6 +10,15 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ***********************************************************************************************************************************
+# *Count me in? How Considering Foreign Residents in the Population Statistics Affects Federal Constituency Boundaries*
+
+Programme: Master of Data Science for Public Policy 2024
+Student: Carlo Greß
+Supervisor: Prof. Asya Magazinnik
+
+Link to the GitHub repository (all required files are located there): https://github.com/carlo-gress/ma_thesis
+
+***********************************************************************************************************************************
 # 0. Dependencies
 
 ```{r}
