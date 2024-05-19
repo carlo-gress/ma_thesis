@@ -260,7 +260,7 @@ btw_21 <- btw_21 |>
   mutate(DistrictNo = as.numeric(as.character(DistrictNo)))
 
 btw_21 <- btw_21 |>
-  left_join(wahlkreise_germany |> select(WKR_NR, geometry), by = c("DistrictNo" = "WKR_NR"))
+  left_join(wahlkreise_germany |> dplyr::select(WKR_NR, geometry), by = c("DistrictNo" = "WKR_NR"))
 
 btw_21_sf <- st_as_sf(btw_21, crs = st_crs(utm_crs_germany))
 ```
@@ -414,7 +414,7 @@ btw21_df <- as.data.frame(btw_21_sf)
 
 # Reshaping the data to a long format
 btw21_long <- btw21_df |>
-  select(deviation, deviation_non_residents) |>
+  dplyr::select(deviation, deviation_non_residents) |>
   pivot_longer(cols = everything(), names_to = "variable", values_to = "value")
 
 # Ensure values are integers
@@ -451,7 +451,7 @@ table_latex <- btw_21 %>%
     GermanSumPopulation = sum(GermanPopulation, na.rm = TRUE)
   ) %>%
   mutate(MeanForeignersPercentage = round((TotalSumPopulation - GermanSumPopulation) / TotalSumPopulation * 100, 2)) %>%
-  select(Country, MeanForeignersPercentage) %>%
+  dplyr::select(Country, MeanForeignersPercentage) %>%
   arrange(MeanForeignersPercentage) %>%
   kable("latex", booktabs = TRUE) %>%
   kable_styling(latex_options = c("striped", "scale_down"))
